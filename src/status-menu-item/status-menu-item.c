@@ -107,10 +107,163 @@ _connui_internet_status_menu_item_inet_status_cb(int state,
   // FIXME
 }
 
+static gchar *
+connui_internet_status_menu_item_get_icon(struct network_entry *entry,
+                                          gboolean dimmed)
+{
+  gchar *rv = NULL;
+  GConfClient *gconf = gconf_client_get_default();
+
+  if (entry &&
+      entry->service_type && *entry->service_type &&
+      entry->service_id && *entry->service_id)
+  {
+    gchar *path = iap_common_get_service_gconf_path(entry->service_type,
+                                                    entry->service_id);
+    if (path)
+    {
+      gchar *s = dimmed ?
+            g_strdup_printf("%s/type_statusbar_dimmed_icon_name", path):
+            g_strdup_printf("%s/type_statusbar_icon_name", path);
+
+      rv = gconf_client_get_string(gconf, s, NULL);
+
+      g_free(s);
+      g_free(path);
+    }
+  }
+
+  if (entry->network_type && !rv)
+  {
+    gchar *s = dimmed ? "%s/%s/statusbar_dimmed_icon_name" :
+                        "%s/%s/statusbar_icon_name";
+
+    s = g_strdup_printf(s, "/system/osso/connectivity/network_type",
+                        entry->network_type);
+    rv = gconf_client_get_string(gconf, s, NULL);
+    g_free(s);
+  }
+
+
+  if (dimmed && !rv)
+    rv = g_strdup("statusarea_internetconnection_no");
+
+  g_object_unref(G_OBJECT(gconf));
+
+  return rv;
+}
+
 static void
 connui_internet_status_menu_item_set_active_conn_info(ConnuiInternetStatusMenuItem *self)
 {
-  // FIXME
+  ConnuiInternetStatusMenuItemPrivate *priv = self->priv;
+  gchar *button_icon_name;
+  gchar *network_name;
+  GdkPixbuf *button_icon;
+  GdkPixbuf *status_area_icon = NULL;
+  struct pixbuf_anim *pixbuf_anim = NULL;
+
+  g_return_if_fail(priv != NULL && priv->pixbuf_cache != NULL);
+
+  if ( (unsigned int)(priv->connection_state - 2) <= 1 )
+  {
+    if (_connui_internet_status_menu_item_is_suspended(self->priv))
+    {
+      struct timespec tp;
+
+      clock_gettime(CLOCK_MONOTONIC, &tp);
+      if (priv->suspendcode == 5 &&
+          tp.tv_sec - priv->tp.tv_sec > 10 &&
+          !strcmp(priv->network->network_type, "GPRS"))
+      {
+        hildon_banner_show_information(0, 0, _("conn_ib_suspended"));
+        priv->tp.tv_sec = tp.tv_sec;
+        priv->tp.tv_nsec = tp.tv_nsec;
+      }
+
+      network_name = g_strdup(_("stab_me_internet_suspended"));
+      button_icon_name = g_strdup("general_packetdata_suspended");
+    }
+    else
+    {
+      gchar *s = iap_settings_get_name_by_network(priv->network, 0, 0);
+      button_icon_name = iap_settings_get_iap_icon_name_by_network_and_signal(
+            priv->network,
+            priv->signal_strength);
+
+      network_name = g_strdup_printf(_("stab_me_internet_connected_to"), s);
+      g_free(s);
+    }
+  }
+  else
+  {
+    button_icon_name = g_strdup("statusarea_internetconnection_no");
+    network_name = g_strdup(_("stab_me_internet_disconnected"));
+  }
+
+  button_icon =
+      connui_pixbuf_cache_get(priv->pixbuf_cache, button_icon_name, 48);
+
+  if (button_icon && priv->conn_icon)
+    gtk_image_set_from_pixbuf(GTK_IMAGE(priv->conn_icon), button_icon);
+
+  if (priv->button)
+    hildon_button_set_value(HILDON_BUTTON(priv->button), network_name);
+
+  g_free(network_name);
+  g_free(button_icon_name);
+
+  if (priv->network && priv->network->network_type)
+  {
+    gchar *s = NULL;
+
+    if (priv->connection_state == 3)
+    {
+      if (_connui_internet_status_menu_item_is_suspended(priv))
+        s = g_strdup("general_packetdata_suspended");
+      else
+        s = connui_internet_status_menu_item_get_icon(priv->network, FALSE);
+      if (s)
+        status_area_icon = connui_pixbuf_cache_get(priv->pixbuf_cache, s, 16);
+    }
+    else if (priv->connection_state == 2)
+    {
+      gchar *dimmed;
+
+      s = connui_internet_status_menu_item_get_icon(priv->network, FALSE);
+      dimmed = connui_internet_status_menu_item_get_icon(priv->network, TRUE);
+      pixbuf_anim = connui_pixbuf_anim_new_from_icons(16, 1.5, s, dimmed, NULL);
+      g_free(dimmed);
+    }
+
+    g_free(s);
+#if 0 /* Noone sets err */
+    if (err)
+    {
+      ULOG_ERR("Unable to load status area icons or animations: %s",
+               err->message);
+      g_clear_error(&err);
+
+      return;
+    }
+#endif
+  }
+
+  if (priv->pixbuf_anim)
+  {
+    connui_pixbuf_anim_destroy(priv->pixbuf_anim);
+    priv->pixbuf_anim = 0;
+  }
+
+  if (pixbuf_anim)
+  {
+    priv->pixbuf_anim = pixbuf_anim;
+    connui_internet_status_menu_item_start_anim(self);
+  }
+  else
+    hd_status_plugin_item_set_status_area_icon(HD_STATUS_PLUGIN_ITEM(self),
+                                               status_area_icon);
+
 }
 
 static void
