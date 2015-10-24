@@ -115,6 +115,13 @@ connui_internet_status_menu_item_conn_strength_start(ConnuiInternetStatusMenuIte
 }
 
 static void
+connui_internet_status_menu_item_conn_strength_stop(ConnuiInternetStatusMenuItem *self)
+{
+  connui_inetstate_statistics_stop(connui_internet_status_menu_item_conn_strength_cb);
+  self->priv->signal_strength = 0;
+}
+
+static void
 connui_internet_status_menu_item_cellular_data_suspended_status_cb(gboolean suspended,
                                                                    guint32 suspendcode,
                                                                    gpointer user_data)
