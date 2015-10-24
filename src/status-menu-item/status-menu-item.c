@@ -45,6 +45,12 @@ struct _ConnuiInternetStatusMenuItemPrivate
   struct timespec tp;
 };
 
+/* FIXME - get all enum members and move it to libconnui.h */
+enum inetstate_status
+{
+  FLIGHTMODE = 0
+};
+
 HD_DEFINE_PLUGIN_MODULE(ConnuiInternetStatusMenuItem,
                         connui_internet_status_menu_item,
                         HD_TYPE_STATUS_MENU_ITEM)
@@ -97,14 +103,6 @@ connui_internet_status_menu_item_request_select_connection(GtkButton *button,
   }
 
   g_object_unref(G_OBJECT(proxy));
-}
-
-static void
-_connui_internet_status_menu_item_inet_status_cb(int state,
-                                                 struct network_entry *entry,
-                                                 gpointer user_data)
-{
-  // FIXME
 }
 
 static gchar *
@@ -329,6 +327,90 @@ connui_internet_status_menu_item_conn_strength_stop(ConnuiInternetStatusMenuItem
 }
 
 static void
+connui_internet_status_menu_item_set_network(ConnuiInternetStatusMenuItem *self,
+                                             struct network_entry *network)
+{
+  iap_network_entry_clear(self->priv->network);
+  g_free(self->priv->network);
+  self->priv->network = network;
+  connui_internet_status_menu_item_set_active_conn_info(self);
+}
+
+static void
+connui_internet_status_menu_item_inet_status_cb(int state,
+                                                struct network_entry *entry,
+                                                gpointer user_data)
+{
+  ConnuiInternetStatusMenuItem *self =
+      CONNUI_INTERNET_STATUS_MENU_ITEM(user_data);
+  ConnuiInternetStatusMenuItemPrivate *priv = self->priv;
+  static int old_state = 1;
+
+  g_return_if_fail(priv != NULL);
+
+  priv->connection_state = state;
+
+  switch (state)
+  {
+    case FLIGHTMODE:
+    {
+      if (old_state)
+      {
+        hildon_banner_show_information(0, 0,
+                                       _("conn_ib_flight_mode_activated"));
+      }
+    }
+    case 1:
+    case 5:
+    {
+      connui_internet_status_menu_item_set_network(self, NULL);
+
+      break;
+    }
+    case 2:
+    case 3:
+    {
+      connui_internet_status_menu_item_set_network(
+            self, iap_network_entry_dup(entry));
+
+      break;
+    }
+    case 4:
+    {
+      if (!entry || !priv->network ||
+          iap_network_entry_equal(entry, priv->network))
+      {
+        connui_internet_status_menu_item_set_network(
+              self, iap_network_entry_dup(entry));
+      }
+
+      break;
+    }
+    default:
+      break;
+  }
+
+  if (old_state != FLIGHTMODE && state)
+    hildon_banner_show_information(0, 0, _("conn_ib_normal_mode_activated"));
+
+  if (entry && entry->network_type &&
+      (!strncmp(entry->network_type, "WLAN_", 5) ||
+       !strncmp(entry->network_type, "WIMAX", 5)))
+  {
+    priv->is_active = (state > 1 && state < 5);
+
+    if (priv->is_active)
+      connui_internet_status_menu_item_conn_strength_start(self);
+    else
+      connui_internet_status_menu_item_conn_strength_stop(self);
+  }
+  else
+    priv->is_active = 0;
+
+  old_state = state;
+}
+
+static void
 connui_internet_status_menu_item_is_displayed(GtkWidget *widget,
                                               gpointer user_data)
 {
@@ -454,7 +536,7 @@ connui_internet_status_menu_item_finalize(GObject *self)
   }
 
   connui_internet_status_menu_item_conn_strength_stop(CONNUI_INTERNET_STATUS_MENU_ITEM(self));
-  connui_inetstate_close(_connui_internet_status_menu_item_inet_status_cb);
+  connui_inetstate_close(connui_internet_status_menu_item_inet_status_cb);
   connui_cellular_data_suspended_close(connui_internet_status_menu_item_cellular_data_suspended_status_cb);
 
   if (priv->pixbuf_cache)
@@ -513,7 +595,8 @@ connui_internet_status_menu_item_init(ConnuiInternetStatusMenuItem *self)
      (osso_display_event_cb_f *)connui_internet_status_menu_item_display_cb,
      self);
 
-   if (!connui_inetstate_status(_connui_internet_status_menu_item_inet_status_cb, self))
+   if (!connui_inetstate_status(connui_internet_status_menu_item_inet_status_cb,
+                                self))
      ULOG_ERR("inet status: cannot receive status updates");
 
    if (!connui_cellular_data_suspended_status(connui_internet_status_menu_item_cellular_data_suspended_status_cb, self))
