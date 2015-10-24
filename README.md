@@ -1,2 +1,2 @@
-# connui-statusbar-internet
-internet status bar plugin clone
+# connui-internet
+maemo5 connui-internet clone
