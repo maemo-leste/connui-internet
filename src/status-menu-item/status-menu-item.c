@@ -83,6 +83,24 @@ connui_internet_status_menu_item_parent_set_signal(GtkWidget *widget,
 }
 
 static void
+connui_internet_status_menu_item_conn_strength_cb(struct network_entry *entry,
+                                                  struct network_stats *statistics,
+                                                  gpointer user_data)
+{
+  ConnuiInternetStatusMenuItem *self =
+      CONNUI_INTERNET_STATUS_MENU_ITEM(user_data);
+  ConnuiInternetStatusMenuItemPrivate *priv = self->priv;
+
+  g_return_if_fail(priv != NULL && priv->conn_icon != NULL && statistics != NULL);
+
+  if ( priv->signal_strength != statistics->signal_strength )
+  {
+    priv->signal_strength = statistics->signal_strength;
+    connui_internet_status_menu_item_set_active_conn_info(self);
+  }
+}
+
+static void
 connui_internet_status_menu_item_cellular_data_suspended_status_cb(gboolean suspended,
                                                                    guint32 suspendcode,
                                                                    gpointer user_data)
