@@ -36,7 +36,7 @@ struct _ConnuiInternetStatusMenuItemPrivate
   int connection_state;
   gboolean is_active;
   gboolean is_displayed;
-  int signals_set;
+  gboolean signals_set;
   gboolean suspended;
   guint32 suspendcode;
   gint signal_strength;
@@ -141,7 +141,6 @@ connui_internet_status_menu_item_get_icon(struct network_entry *entry,
     rv = gconf_client_get_string(gconf, s, NULL);
     g_free(s);
   }
-
 
   if (dimmed && !rv)
     rv = g_strdup("statusarea_internetconnection_no");
@@ -462,7 +461,7 @@ connui_internet_status_menu_item_parent_set_signal(GtkWidget *widget,
           obj, G_SIGNAL_MATCH_DATA|G_SIGNAL_MATCH_FUNC, 0, 0, NULL,
           connui_internet_status_menu_item_is_not_displayed, self);
 
-    priv->signals_set = 0;
+    priv->signals_set = FALSE;
   }
 
   widget = gtk_widget_get_ancestor(GTK_WIDGET(self), GTK_TYPE_WINDOW);
@@ -477,7 +476,7 @@ connui_internet_status_menu_item_parent_set_signal(GtkWidget *widget,
           G_CALLBACK(connui_internet_status_menu_item_is_not_displayed), self,
           NULL, 0);
 
-    priv->signals_set = 1;
+    priv->signals_set = TRUE;
   }
 }
 
@@ -599,7 +598,9 @@ connui_internet_status_menu_item_init(ConnuiInternetStatusMenuItem *self)
                                 self))
      ULOG_ERR("inet status: cannot receive status updates");
 
-   if (!connui_cellular_data_suspended_status(connui_internet_status_menu_item_cellular_data_suspended_status_cb, self))
+   if (!connui_cellular_data_suspended_status(
+         connui_internet_status_menu_item_cellular_data_suspended_status_cb,
+         self))
      ULOG_ERR("inet status: cannot receive cellular data suspended updates");
 
    g_signal_connect_data(G_OBJECT(self), "parent-set",
