@@ -101,6 +101,20 @@ connui_internet_status_menu_item_conn_strength_cb(struct network_entry *entry,
 }
 
 static void
+connui_internet_status_menu_item_conn_strength_start(ConnuiInternetStatusMenuItem *self)
+{
+  ConnuiInternetStatusMenuItemPrivate *priv = self->priv;
+
+  if (priv->is_active && priv->is_displayed &&
+      priv->display_state != OSSO_DISPLAY_OFF)
+  {
+    connui_inetstate_statistics_start(1000,
+                                      connui_internet_status_menu_item_conn_strength_cb,
+                                      self);
+  }
+}
+
+static void
 connui_internet_status_menu_item_cellular_data_suspended_status_cb(gboolean suspended,
                                                                    guint32 suspendcode,
                                                                    gpointer user_data)
