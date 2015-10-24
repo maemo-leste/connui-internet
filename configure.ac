@@ -26,16 +26,16 @@ AC_DISABLE_STATIC
 AC_PROG_LIBTOOL
 
 PKG_CHECK_MODULES(OSSO_AF_SETTINGS, osso-af-settings)
-PKG_CHECK_MODULES(HILDON, libhildondesktop-1)
+PKG_CHECK_MODULES(LIBHILDON, libhildondesktop-1)
+PKG_CHECK_MODULES(HILDON, hildon-1)
+PKG_CHECK_MODULES(CONNUI, libconnui)
 
 dnl Localization
-GETTEXT_PACKAGE=osso-applet-accounts
+GETTEXT_PACKAGE=osso-connectivity-ui
 AC_SUBST(GETTEXT_PACKAGE)
 AC_DEFINE_UNQUOTED(GETTEXT_PACKAGE, "${GETTEXT_PACKAGE}", [gettext package])
 
 dnl Installation directories
-AC_SUBST(librtcom_accountsdir)
-
 hildondesktoplibdir="`$PKG_CONFIG --variable=hildondesktoplibdir osso-af-settings`"
 AC_SUBST(hildondesktoplibdir)
 
