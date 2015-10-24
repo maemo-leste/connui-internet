@@ -5,9 +5,8 @@ connui_internet_status_menu_item_ladir = $(hildondesktoplibdir)
 connui_internet_status_menu_item_la_SOURCES = \
 	status-menu-item.c
 
-connui_internet_status_menu_item_la_CFLAGS = $(ACCOUNTS_CFLAGS) $(GLADE_CFLAGS) \
-		-DPLUGIN_XML_DIR=\"$(pluginlibdir)/xml\"
-connui_internet_status_menu_item_la_LIBADD = $(ACCOUNTS_LIBS) $(GLADE_LIBS)
+connui_internet_status_menu_item_la_CFLAGS = $(HILDON_CFLAGS)
+connui_internet_status_menu_item_la_LIBADD = $(HILDON_LIBS)
 
 connui_internet_status_menu_item_la_LDFLAGS = -module -avoid-version
 

@@ -26,7 +26,7 @@ AC_DISABLE_STATIC
 AC_PROG_LIBTOOL
 
 PKG_CHECK_MODULES(OSSO_AF_SETTINGS, osso-af-settings)
-#PKG_CHECK_MODULES(GLADE, libglade-2.0)
+PKG_CHECK_MODULES(HILDON, libhildondesktop-1)
 
 dnl Localization
 GETTEXT_PACKAGE=osso-applet-accounts
