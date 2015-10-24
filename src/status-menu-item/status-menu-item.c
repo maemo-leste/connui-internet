@@ -75,14 +75,6 @@ connui_internet_status_menu_item_set_active_conn_info(ConnuiInternetStatusMenuIt
 }
 
 static void
-connui_internet_status_menu_item_parent_set_signal(GtkWidget *widget,
-                                                   GtkObject *old_parent,
-                                                   gpointer user_data)
-{
-  // FIXME
-}
-
-static void
 connui_internet_status_menu_item_conn_strength_cb(struct network_entry *entry,
                                                   struct network_stats *statistics,
                                                   gpointer user_data)
@@ -148,6 +140,48 @@ connui_internet_status_menu_item_is_not_displayed(GtkWidget *widget,
 
   if (priv->is_active)
     connui_internet_status_menu_item_conn_strength_stop(self);
+}
+
+static void
+connui_internet_status_menu_item_parent_set_signal(GtkWidget *widget,
+                                                   GtkObject *old_parent,
+                                                   gpointer user_data)
+{
+  ConnuiInternetStatusMenuItem *self;
+  ConnuiInternetStatusMenuItemPrivate *priv;
+
+  self = CONNUI_INTERNET_STATUS_MENU_ITEM(user_data);
+  priv = self->priv;
+
+  if (priv->signals_set)
+  {
+    GObject *obj = G_OBJECT(gtk_widget_get_ancestor(GTK_WIDGET(old_parent),
+                                                    GTK_TYPE_WINDOW));
+
+    g_signal_handlers_disconnect_matched(
+          obj, G_SIGNAL_MATCH_DATA|G_SIGNAL_MATCH_FUNC, 0, 0, NULL,
+          connui_internet_status_menu_item_is_displayed, self);
+    g_signal_handlers_disconnect_matched(
+          obj, G_SIGNAL_MATCH_DATA|G_SIGNAL_MATCH_FUNC, 0, 0, NULL,
+          connui_internet_status_menu_item_is_not_displayed, self);
+
+    priv->signals_set = 0;
+  }
+
+  widget = gtk_widget_get_ancestor(GTK_WIDGET(self), GTK_TYPE_WINDOW);
+  if (widget)
+  {
+    g_signal_connect_data(
+          G_OBJECT(widget), "map",
+          G_CALLBACK(connui_internet_status_menu_item_is_displayed), self, NULL,
+          0);
+    g_signal_connect_data(
+          G_OBJECT(widget), "unmap",
+          G_CALLBACK(connui_internet_status_menu_item_is_not_displayed), self,
+          NULL, 0);
+
+    priv->signals_set = 1;
+  }
 }
 
 static void
