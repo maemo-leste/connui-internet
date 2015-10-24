@@ -154,6 +154,29 @@ connui_internet_status_menu_item_get_icon(struct network_entry *entry,
 }
 
 static void
+connui_internet_status_menu_item_anim_set_pixbuf(gpointer user_data,
+                                                 GdkPixbuf *pixbuf)
+{
+  ConnuiInternetStatusMenuItem *item =
+      CONNUI_INTERNET_STATUS_MENU_ITEM(user_data);
+
+  g_return_if_fail(item != NULL && pixbuf != NULL);
+
+  hd_status_plugin_item_set_status_area_icon(HD_STATUS_PLUGIN_ITEM(item),
+                                             pixbuf);
+}
+
+static void
+connui_internet_status_menu_item_start_anim(ConnuiInternetStatusMenuItem *item)
+{
+  g_return_if_fail(item != NULL && item->priv != NULL);
+
+  if (item->priv->pixbuf_anim && item->priv->display_state != OSSO_DISPLAY_OFF)
+    connui_pixbuf_anim_start(item->priv->pixbuf_anim, item,
+                             connui_internet_status_menu_item_anim_set_pixbuf);
+}
+
+static void
 connui_internet_status_menu_item_set_active_conn_info(ConnuiInternetStatusMenuItem *self)
 {
   ConnuiInternetStatusMenuItemPrivate *priv = self->priv;
