@@ -173,6 +173,14 @@ connui_internet_status_menu_item_start_anim(ConnuiInternetStatusMenuItem *item)
                              connui_internet_status_menu_item_anim_set_pixbuf);
 }
 
+static gboolean
+connui_internet_status_menu_item_is_suspended(ConnuiInternetStatusMenuItemPrivate *priv)
+{
+  g_return_if_fail(priv != NULL && priv->network != NULL && priv->network->network_type != NULL);
+
+  return priv->suspended ? !strcmp(priv->network->network_type, "GPRS") : FALSE;
+}
+
 static void
 connui_internet_status_menu_item_set_active_conn_info(ConnuiInternetStatusMenuItem *self)
 {
@@ -187,7 +195,7 @@ connui_internet_status_menu_item_set_active_conn_info(ConnuiInternetStatusMenuIt
 
   if ( (unsigned int)(priv->connection_state - 2) <= 1 )
   {
-    if (_connui_internet_status_menu_item_is_suspended(self->priv))
+    if (connui_internet_status_menu_item_is_suspended(self->priv))
     {
       struct timespec tp;
 
@@ -239,7 +247,7 @@ connui_internet_status_menu_item_set_active_conn_info(ConnuiInternetStatusMenuIt
 
     if (priv->connection_state == 3)
     {
-      if (_connui_internet_status_menu_item_is_suspended(priv))
+      if (connui_internet_status_menu_item_is_suspended(priv))
         s = g_strdup("general_packetdata_suspended");
       else
         s = connui_internet_status_menu_item_get_icon(priv->network, FALSE);
