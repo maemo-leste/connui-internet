@@ -33,8 +33,8 @@ struct _ConnuiInternetStatusMenuItemPrivate
   struct pixbuf_anim *pixbuf_anim;
   struct network_entry *network;
   int connection_state;
-  int is_active;
-  int is_displayed;
+  gboolean is_active;
+  gboolean is_displayed;
   int signals_set;
   gboolean suspended;
   guint32 suspendcode;
@@ -119,6 +119,35 @@ connui_internet_status_menu_item_conn_strength_stop(ConnuiInternetStatusMenuItem
 {
   connui_inetstate_statistics_stop(connui_internet_status_menu_item_conn_strength_cb);
   self->priv->signal_strength = 0;
+}
+
+static void
+connui_internet_status_menu_item_is_displayed(GtkWidget *widget,
+                                              gpointer user_data)
+{
+  ConnuiInternetStatusMenuItem *self =
+      CONNUI_INTERNET_STATUS_MENU_ITEM(user_data);
+  ConnuiInternetStatusMenuItemPrivate *priv = self->priv;
+
+  priv->is_displayed = TRUE;
+
+  if (priv->is_active)
+    connui_internet_status_menu_item_conn_strength_start(self);
+}
+
+static void
+connui_internet_status_menu_item_is_not_displayed(GtkWidget *widget,
+                                                  gpointer user_data)
+{
+
+  ConnuiInternetStatusMenuItem *self =
+      CONNUI_INTERNET_STATUS_MENU_ITEM(user_data);
+  ConnuiInternetStatusMenuItemPrivate *priv = self->priv;
+
+  priv->is_displayed = FALSE;
+
+  if (priv->is_active)
+    connui_internet_status_menu_item_conn_strength_stop(self);
 }
 
 static void
