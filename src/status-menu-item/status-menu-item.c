@@ -164,8 +164,34 @@ connui_internet_status_menu_item_display_cb(osso_display_state_t state,
 }
 
 static void
+connui_internet_status_menu_item_finalize(GObject *self)
+{
+  ConnuiInternetStatusMenuItemPrivate *priv =
+      CONNUI_INTERNET_STATUS_MENU_ITEM(self)->priv;
+
+  if (priv->osso_context)
+  {
+    osso_deinitialize(priv->osso_context);
+    priv->osso_context = 0;
+  }
+
+  connui_internet_status_menu_item_conn_strength_stop(CONNUI_INTERNET_STATUS_MENU_ITEM(self));
+  connui_inetstate_close(_connui_internet_status_menu_item_inet_status_cb);
+  connui_cellular_data_suspended_close(connui_internet_status_menu_item_cellular_data_suspended_status_cb);
+
+  if (priv->pixbuf_cache)
+  {
+    connui_pixbuf_cache_destroy(priv->pixbuf_cache);
+    priv->pixbuf_cache = 0;
+  }
+
+  G_OBJECT_CLASS(self)->finalize(self);
+}
+
+static void
 connui_internet_status_menu_item_class_init(ConnuiInternetStatusMenuItemClass *klass)
 {
+  G_OBJECT_CLASS(klass)->finalize = connui_internet_status_menu_item_finalize;
   g_type_class_add_private(klass, sizeof(ConnuiInternetStatusMenuItemPrivate));
 }
 
