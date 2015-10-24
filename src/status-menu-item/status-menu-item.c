@@ -2,6 +2,7 @@
 #include <libhildondesktop/libhildondesktop.h>
 #include <libconnui.h>
 #include <libintl.h>
+#include <icd/dbus_api.h>
 
 #include "config.h"
 
@@ -57,7 +58,45 @@ static void
 connui_internet_status_menu_item_request_select_connection(GtkButton *button,
                                                            gpointer user_data)
 {
-// FIXME
+  DBusGConnection *bus;
+  GError *error = NULL;
+
+  if (!(bus = dbus_g_bus_get(DBUS_BUS_SYSTEM, &error)))
+  {
+    if (error)
+      ULOG_ERR("Error: %s", error->message);
+
+    g_clear_error(&error);
+
+    return;
+  }
+
+  DBusGProxy *proxy = dbus_g_proxy_new_for_name(bus,
+                                                ICD_DBUS_API_INTERFACE,
+                                                ICD_DBUS_API_PATH,
+                                                ICD_DBUS_API_INTERFACE);
+  dbus_g_connection_unref(bus);
+
+  if (!proxy)
+  {
+    ULOG_ERR("Unable to get DBUS proxy for ICd2");
+
+    return;
+  }
+
+  if (!dbus_g_proxy_call(proxy,
+                         ICD_DBUS_API_SELECT_REQ,
+                         &error,
+                         G_TYPE_UINT, ICD_CONNECTION_FLAG_UI_EVENT,
+                         G_TYPE_INVALID, G_TYPE_INVALID))
+  {
+    if (error)
+      ULOG_ERR("Error: %s", error->message);
+
+    g_clear_error(&error);
+  }
+
+  g_object_unref(G_OBJECT(proxy));
 }
 
 static void
