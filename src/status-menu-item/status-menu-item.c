@@ -196,7 +196,7 @@ connui_internet_status_menu_item_set_active_conn_info(ConnuiInternetStatusMenuIt
 
   g_return_if_fail(priv != NULL && priv->pixbuf_cache != NULL);
 
-  if ( (unsigned int)(priv->connection_state - 2) <= 1 )
+  if (priv->connection_state > 1 && priv->connection_state < 4)
   {
     if (connui_internet_status_menu_item_is_suspended(self->priv))
     {
@@ -402,7 +402,7 @@ connui_internet_status_menu_item_inet_status_cb(int state,
       break;
   }
 
-  if (old_state != FLIGHTMODE && state)
+  if (old_state == FLIGHTMODE && state != FLIGHTMODE)
     hildon_banner_show_information(0, 0, _("conn_ib_normal_mode_activated"));
 
   if (entry && entry->network_type &&
