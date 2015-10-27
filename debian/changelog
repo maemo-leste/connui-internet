@@ -1,3 +1,9 @@
+connui-internet (2.72+0m5) fremantle; urgency=low
+
+  * Release for Maemo
+
+ -- Ivaylo Dimitrov <freemangordon@abv.bg>  Tue, 27 Oct 2015 17:35:45 +0200
+
 connui-internet (2.72) fremantle; urgency=low
 
   * Initial FOSS release
