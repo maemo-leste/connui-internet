@@ -1,3 +1,9 @@
+connui-internet (2.73+0m5) fremantle; urgency=low
+
+  * fix finalize calling incorrect object class
+
+ -- Ivaylo Dimitrov <freemangordon@abv.bg>  Tue, 27 Oct 2015 23:45:11 +0200
+
 connui-internet (2.72+0m5) fremantle; urgency=low
 
   * Release for Maemo
