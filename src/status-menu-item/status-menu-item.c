@@ -1,8 +1,11 @@
 #include <hildon/hildon-button.h>
+#include <hildon/hildon-banner.h>
 #include <libhildondesktop/libhildondesktop.h>
 #include <libconnui.h>
 #include <libintl.h>
 #include <icd/dbus_api.h>
+#include <osso-log.h>
+#include <string.h>
 
 #include "config.h"
 
@@ -176,7 +179,7 @@ connui_internet_status_menu_item_start_anim(ConnuiInternetStatusMenuItem *item)
 static gboolean
 connui_internet_status_menu_item_is_suspended(ConnuiInternetStatusMenuItemPrivate *priv)
 {
-  g_return_if_fail(priv != NULL && priv->network != NULL && priv->network->network_type != NULL);
+  g_return_val_if_fail(priv != NULL && priv->network != NULL && priv->network->network_type != NULL, FALSE);
 
   return priv->suspended ? !strcmp(priv->network->network_type, "GPRS") : FALSE;
 }
@@ -215,11 +218,13 @@ connui_internet_status_menu_item_set_active_conn_info(ConnuiInternetStatusMenuIt
     else
     {
       gchar *s = iap_settings_get_name_by_network(priv->network, 0, 0);
+      gchar *tmp = _("stab_me_internet_connected_to");
+
       button_icon_name = iap_settings_get_iap_icon_name_by_network_and_signal(
             priv->network,
             priv->signal_strength);
 
-      network_name = g_strdup_printf(_("stab_me_internet_connected_to"), s);
+      network_name = g_strdup_printf(tmp, s);
       g_free(s);
     }
   }

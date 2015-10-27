@@ -30,6 +30,7 @@ PKG_CHECK_MODULES(LIBHILDON, libhildondesktop-1)
 PKG_CHECK_MODULES(HILDON, hildon-1)
 PKG_CHECK_MODULES(CONNUI, libconnui)
 PKG_CHECK_MODULES(ICD2, icd2)
+PKG_CHECK_MODULES(OSSO, libosso)
 
 dnl Localization
 GETTEXT_PACKAGE=osso-connectivity-ui
