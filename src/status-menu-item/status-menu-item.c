@@ -557,7 +557,7 @@ connui_internet_status_menu_item_finalize(GObject *self)
     priv->pixbuf_cache = 0;
   }
 
-  G_OBJECT_CLASS(self)->finalize(self);
+  G_OBJECT_CLASS(connui_internet_status_menu_item_parent_class)->finalize(self);
 }
 
 static void
