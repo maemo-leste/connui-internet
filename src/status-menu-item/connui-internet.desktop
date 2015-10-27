@@ -1,0 +1,5 @@
+[Desktop Entry]
+Name=Connui Internet
+Comment=Internet Status Menu item
+Type=default
+X-Path=connui-internet-status-menu-item.so

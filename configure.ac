@@ -41,6 +41,9 @@ dnl Installation directories
 hildondesktoplibdir="`$PKG_CONFIG --variable=hildondesktoplibdir osso-af-settings`"
 AC_SUBST(hildondesktoplibdir)
 
+hildonstatusmenudesktopentrydir="`$PKG_CONFIG --variable=hildonstatusmenudesktopentrydir libhildondesktop-1`"
+AC_SUBST(hildonstatusmenudesktopentrydir)
+
 AC_ARG_ENABLE(cast-checks,  [  --disable-cast-checks   compile with GLIB cast checks disabled],[cchecks=${enableval}],cchecks=yes)
 if test "x$cchecks" = "xno"; then
     CFLAGS="$CFLAGS -DG_DISABLE_CAST_CHECKS"

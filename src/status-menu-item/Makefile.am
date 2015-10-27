@@ -20,3 +20,6 @@ AM_CFLAGS = \
 		-DG_LOG_DOMAIN=\"$(PACKAGE)\"
 
 AM_LIBS = $(ACCOUNTS_LIBS)
+
+hildonstatusmenudesktopentry_DATA = connui-internet.desktop
+EXTRA_DIST = $(hildonstatusmenudesktopentry_DATA)
