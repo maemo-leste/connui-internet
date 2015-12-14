@@ -9,7 +9,7 @@ Package: connui-statusbar-internet
 Architecture: any
 Section: x11
 Replaces: osso-connectivity-ui-statusbar
-Depends: ${shlibs:Depends}, ${misc:Depends}, osso-icons-default | osso-icons, osso-connectivity-ui-l10n-mr | osso-connectivity-ui-l10n-mr0
+Depends: ${shlibs:Depends}, ${misc:Depends}, osso-icons-default | osso-icons, osso-connectivity-ui-l10n-mr | osso-connectivity-ui-l10n-mr0, libconnui
 Conflicts: osso-connectivity-ui-statusbar
 Description: Internet Connectivity statusbar plugin
  This package provides the Internet Connectivity statusbar plugin.

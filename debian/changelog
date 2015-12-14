@@ -1,3 +1,9 @@
+connui-internet (2.74+0m5) fremantle; urgency=low
+
+  * Fix dependencies
+
+ -- Ivaylo Dimitrov <freemangordon@abv.bg>  Mon, 14 Dec 2015 01:16:44 -0500
+
 connui-internet (2.73+0m5) fremantle; urgency=low
 
   * fix finalize calling incorrect object class
