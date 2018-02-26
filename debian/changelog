@@ -1,3 +1,9 @@
+connui-internet (2.75) unstable; urgency=medium
+
+  * Maemo Leste packaging
+
+ -- Ivan J. <parazyd@dyne.org>  Mon, 26 Feb 2018 23:17:00 +0100
+
 connui-internet (2.74+0m5) fremantle; urgency=low
 
   * Fix dependencies
