@@ -1,10 +1,11 @@
 #include <hildon/hildon-button.h>
 #include <hildon/hildon-banner.h>
 #include <libhildondesktop/libhildondesktop.h>
-#include <libconnui.h>
+#include <connui/connui.h>
 #include <libintl.h>
 #include <icd/dbus_api.h>
 #include <osso-log.h>
+
 #include <string.h>
 
 #include "config.h"
@@ -33,9 +34,9 @@ struct _ConnuiInternetStatusMenuItemPrivate
 {
   GtkWidget *conn_icon;
   GtkWidget *button;
-  struct pixbuf_cache *pixbuf_cache;
-  struct pixbuf_anim *pixbuf_anim;
-  struct network_entry *network;
+  ConnuiPixbufCache *pixbuf_cache;
+  ConnuiPixbufAnim *pixbuf_anim;
+  network_entry *network;
   int connection_state;
   gboolean is_active;
   gboolean is_displayed;
@@ -48,18 +49,13 @@ struct _ConnuiInternetStatusMenuItemPrivate
   struct timespec tp;
 };
 
-/* FIXME - get all enum members and move it to libconnui.h */
-enum inetstate_status
-{
-  FLIGHTMODE = 0
-};
-
 HD_DEFINE_PLUGIN_MODULE(ConnuiInternetStatusMenuItem,
                         connui_internet_status_menu_item,
                         HD_TYPE_STATUS_MENU_ITEM)
 
 static void
-connui_internet_status_menu_item_class_finalize(ConnuiInternetStatusMenuItemClass *klass)
+connui_internet_status_menu_item_class_finalize(
+    ConnuiInternetStatusMenuItemClass *klass)
 {
 }
 
@@ -109,8 +105,7 @@ connui_internet_status_menu_item_request_select_connection(GtkButton *button,
 }
 
 static gchar *
-connui_internet_status_menu_item_get_icon(struct network_entry *entry,
-                                          gboolean dimmed)
+connui_internet_status_menu_item_get_icon(network_entry *entry, gboolean dimmed)
 {
   gchar *rv = NULL;
   GConfClient *gconf = gconf_client_get_default();
@@ -177,22 +172,25 @@ connui_internet_status_menu_item_start_anim(ConnuiInternetStatusMenuItem *item)
 }
 
 static gboolean
-connui_internet_status_menu_item_is_suspended(ConnuiInternetStatusMenuItemPrivate *priv)
+connui_internet_status_menu_item_is_suspended(
+    ConnuiInternetStatusMenuItemPrivate *priv)
 {
-  g_return_val_if_fail(priv != NULL && priv->network != NULL && priv->network->network_type != NULL, FALSE);
+  g_return_val_if_fail(priv != NULL && priv->network != NULL &&
+      priv->network->network_type != NULL, FALSE);
 
   return priv->suspended ? !strcmp(priv->network->network_type, "GPRS") : FALSE;
 }
 
 static void
-connui_internet_status_menu_item_set_active_conn_info(ConnuiInternetStatusMenuItem *self)
+connui_internet_status_menu_item_set_active_conn_info(
+    ConnuiInternetStatusMenuItem *self)
 {
   ConnuiInternetStatusMenuItemPrivate *priv = self->priv;
   gchar *button_icon_name;
   gchar *network_name;
   GdkPixbuf *button_icon;
   GdkPixbuf *status_area_icon = NULL;
-  struct pixbuf_anim *pixbuf_anim = NULL;
+  ConnuiPixbufAnim *pixbuf_anim = NULL;
 
   g_return_if_fail(priv != NULL && priv->pixbuf_cache != NULL);
 
@@ -300,47 +298,48 @@ connui_internet_status_menu_item_set_active_conn_info(ConnuiInternetStatusMenuIt
 }
 
 static void
-connui_internet_status_menu_item_conn_strength_cb(struct network_entry *entry,
-                                                  struct network_stats *statistics,
-                                                  gpointer user_data)
+connui_internet_status_menu_item_conn_strength_cb(
+    network_entry *entry, inetstate_network_stats *stats, gpointer user_data)
 {
   ConnuiInternetStatusMenuItem *self =
       CONNUI_INTERNET_STATUS_MENU_ITEM(user_data);
   ConnuiInternetStatusMenuItemPrivate *priv = self->priv;
 
-  g_return_if_fail(priv != NULL && priv->conn_icon != NULL && statistics != NULL);
+  g_return_if_fail(priv != NULL && priv->conn_icon != NULL && stats != NULL);
 
-  if ( priv->signal_strength != statistics->signal_strength )
+  if ( priv->signal_strength != stats->signal_strength )
   {
-    priv->signal_strength = statistics->signal_strength;
+    priv->signal_strength = stats->signal_strength;
     connui_internet_status_menu_item_set_active_conn_info(self);
   }
 }
 
 static void
-connui_internet_status_menu_item_conn_strength_start(ConnuiInternetStatusMenuItem *self)
+connui_internet_status_menu_item_conn_strength_start(
+    ConnuiInternetStatusMenuItem *self)
 {
   ConnuiInternetStatusMenuItemPrivate *priv = self->priv;
 
   if (priv->is_active && priv->is_displayed &&
       priv->display_state != OSSO_DISPLAY_OFF)
   {
-    connui_inetstate_statistics_start(1000,
-                                      connui_internet_status_menu_item_conn_strength_cb,
-                                      self);
+    connui_inetstate_statistics_start(
+          1000, connui_internet_status_menu_item_conn_strength_cb, self);
   }
 }
 
 static void
-connui_internet_status_menu_item_conn_strength_stop(ConnuiInternetStatusMenuItem *self)
+connui_internet_status_menu_item_conn_strength_stop(
+    ConnuiInternetStatusMenuItem *self)
 {
-  connui_inetstate_statistics_stop(connui_internet_status_menu_item_conn_strength_cb);
+  connui_inetstate_statistics_stop(
+        connui_internet_status_menu_item_conn_strength_cb);
   self->priv->signal_strength = 0;
 }
 
 static void
 connui_internet_status_menu_item_set_network(ConnuiInternetStatusMenuItem *self,
-                                             struct network_entry *network)
+                                             network_entry *network)
 {
   iap_network_entry_clear(self->priv->network);
   g_free(self->priv->network);
@@ -349,14 +348,14 @@ connui_internet_status_menu_item_set_network(ConnuiInternetStatusMenuItem *self,
 }
 
 static void
-connui_internet_status_menu_item_inet_status_cb(int state,
-                                                struct network_entry *entry,
+connui_internet_status_menu_item_inet_status_cb(enum inetstate_status state,
+                                                network_entry *entry,
                                                 gpointer user_data)
 {
   ConnuiInternetStatusMenuItem *self =
       CONNUI_INTERNET_STATUS_MENU_ITEM(user_data);
   ConnuiInternetStatusMenuItemPrivate *priv = self->priv;
-  static int old_state = 1;
+  static enum inetstate_status old_state = 1;
 
   g_return_if_fail(priv != NULL);
 
@@ -364,7 +363,7 @@ connui_internet_status_menu_item_inet_status_cb(int state,
 
   switch (state)
   {
-    case FLIGHTMODE:
+    case INETSTATE_STATUS_OFFLINE:
     {
       if (old_state)
       {
@@ -372,22 +371,22 @@ connui_internet_status_menu_item_inet_status_cb(int state,
                                        _("conn_ib_flight_mode_activated"));
       }
     }
-    case 1:
-    case 5:
+    case INETSTATE_STATUS_ONLINE:
+    case INETSTATE_STATUS_DISCONNECTED:
     {
       connui_internet_status_menu_item_set_network(self, NULL);
 
       break;
     }
-    case 2:
-    case 3:
+    case INETSTATE_STATUS_CONNECTING:
+    case INETSTATE_STATUS_CONNECTED:
     {
       connui_internet_status_menu_item_set_network(
             self, iap_network_entry_dup(entry));
 
       break;
     }
-    case 4:
+    case INETSTATE_STATUS_DISCONNECTING:
     {
       if (!entry || !priv->network ||
           iap_network_entry_equal(entry, priv->network))
@@ -402,7 +401,7 @@ connui_internet_status_menu_item_inet_status_cb(int state,
       break;
   }
 
-  if (old_state == FLIGHTMODE && state != FLIGHTMODE)
+  if (old_state == INETSTATE_STATUS_OFFLINE && state != old_state)
     hildon_banner_show_information(0, 0, _("conn_ib_normal_mode_activated"));
 
   if (entry && entry->network_type &&
@@ -494,9 +493,8 @@ connui_internet_status_menu_item_parent_set_signal(GtkWidget *widget,
 }
 
 static void
-connui_internet_status_menu_item_cellular_data_suspended_status_cb(gboolean suspended,
-                                                                   guint32 suspendcode,
-                                                                   gpointer user_data)
+connui_internet_status_menu_item_cellular_data_suspended_status_cb(
+    gboolean suspended, guint32 suspendcode, gpointer user_data)
 {
   ConnuiInternetStatusMenuItem *self =
       CONNUI_INTERNET_STATUS_MENU_ITEM(user_data);
@@ -547,9 +545,11 @@ connui_internet_status_menu_item_finalize(GObject *self)
     priv->osso_context = 0;
   }
 
-  connui_internet_status_menu_item_conn_strength_stop(CONNUI_INTERNET_STATUS_MENU_ITEM(self));
+  connui_internet_status_menu_item_conn_strength_stop(
+        CONNUI_INTERNET_STATUS_MENU_ITEM(self));
   connui_inetstate_close(connui_internet_status_menu_item_inet_status_cb);
-  connui_cellular_data_suspended_close(connui_internet_status_menu_item_cellular_data_suspended_status_cb);
+  connui_cellular_data_suspended_close(
+        connui_internet_status_menu_item_cellular_data_suspended_status_cb);
 
   if (priv->pixbuf_cache)
   {
@@ -561,7 +561,8 @@ connui_internet_status_menu_item_finalize(GObject *self)
 }
 
 static void
-connui_internet_status_menu_item_class_init(ConnuiInternetStatusMenuItemClass *klass)
+connui_internet_status_menu_item_class_init(
+    ConnuiInternetStatusMenuItemClass *klass)
 {
   G_OBJECT_CLASS(klass)->finalize = connui_internet_status_menu_item_finalize;
   g_type_class_add_private(klass, sizeof(ConnuiInternetStatusMenuItemPrivate));
@@ -598,8 +599,9 @@ connui_internet_status_menu_item_init(ConnuiInternetStatusMenuItem *self)
    gtk_widget_show_all(GTK_WIDGET(self));
 
    priv->tp.tv_sec = 0;
-   /* FIXME - get application and version from autoconf or debian packagin */
-   priv->osso_context = osso_initialize("connui_internet_status_menu_item", "2.71+0m5", 1, 0);;
+   /* FIXME - get application and version from autoconf or debian packaging */
+   priv->osso_context = osso_initialize("connui_internet_status_menu_item",
+                                        "2.71+0m5", 1, 0);;
    priv->tp.tv_nsec = 0;
 
    osso_hw_set_display_event_cb(
