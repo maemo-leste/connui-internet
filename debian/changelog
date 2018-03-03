@@ -1,3 +1,9 @@
+connui-internet (2.75.1) unstable; urgency=medium
+
+  * add iap_conndlg [Ivaylo Dimitrov]
+
+ -- Ivan J. <parazyd@dyne.org>  Sat, 03 Mar 2018 20:18:00 +0100
+
 connui-internet (2.75) unstable; urgency=medium
 
   * Maemo Leste packaging
