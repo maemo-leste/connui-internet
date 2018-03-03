@@ -17,7 +17,7 @@ Description: Internet Connectivity statusbar plugin
 Package: connui-statusbar-internet-dbg
 Architecture: any
 Section: extra
-Depends: ${misc:Depends}, osso-connectivity-ui-statusbar (= ${binary:Version})
+Depends: ${misc:Depends}, connui-statusbar-internet (= ${binary:Version})
 Description: Internet Connectivity statusbar plugin - debug symbols
  Internet Connectivity statusbar plugin.
  .
