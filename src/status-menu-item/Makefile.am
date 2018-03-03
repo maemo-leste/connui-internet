@@ -1,7 +1,6 @@
 hildondesktoplib_LTLIBRARIES = \
 	connui-internet-status-menu-item.la
 
-connui_internet_status_menu_item_ladir = $(hildondesktoplibdir)
 connui_internet_status_menu_item_la_SOURCES = \
 	status-menu-item.c
 

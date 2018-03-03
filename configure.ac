@@ -16,6 +16,7 @@ AC_CONFIG_FILES([
 	Makefile
 	src/Makefile
 	src/status-menu-item/Makefile
+	src/iap/Makefile
 ])
 
 AC_ISC_POSIX
@@ -28,6 +29,7 @@ AC_PROG_LIBTOOL
 PKG_CHECK_MODULES(OSSO_AF_SETTINGS, osso-af-settings)
 PKG_CHECK_MODULES(LIBHILDON, libhildondesktop-1)
 PKG_CHECK_MODULES(CONNUI, connui)
+PKG_CHECK_MODULES(MCE, mce)
 
 dnl Localization
 GETTEXT_PACKAGE=osso-connectivity-ui
@@ -35,6 +37,10 @@ AC_SUBST(GETTEXT_PACKAGE)
 AC_DEFINE_UNQUOTED(GETTEXT_PACKAGE, "${GETTEXT_PACKAGE}", [gettext package])
 
 dnl Installation directories
+
+conndlgslibdir=$libdir/conndlgs
+AC_SUBST(conndlgslibdir)
+
 hildondesktoplibdir="`$PKG_CONFIG --variable=hildondesktoplibdir osso-af-settings`"
 AC_SUBST(hildondesktoplibdir)
 
