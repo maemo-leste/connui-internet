@@ -1,1 +1,1 @@
-SUBDIRS = status-menu-item iap
+SUBDIRS = status-menu-item settings iap

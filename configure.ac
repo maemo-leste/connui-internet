@@ -16,6 +16,7 @@ AC_CONFIG_FILES([
 	Makefile
 	src/Makefile
 	src/status-menu-item/Makefile
+	src/settings/Makefile
 	src/iap/Makefile
 ])
 
