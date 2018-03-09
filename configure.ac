@@ -31,6 +31,7 @@ PKG_CHECK_MODULES(OSSO_AF_SETTINGS, osso-af-settings)
 PKG_CHECK_MODULES(LIBHILDON, libhildondesktop-1)
 PKG_CHECK_MODULES(CONNUI, connui)
 PKG_CHECK_MODULES(MCE, mce)
+PKG_CHECK_MODULES(CONBTUI, conbtui)
 
 dnl Localization
 GETTEXT_PACKAGE=osso-connectivity-ui

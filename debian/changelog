@@ -1,3 +1,9 @@
+connui-internet (2.75.2) fremantle; urgency=low
+
+  * add disconnect, save, password and others dialogs
+
+ -- Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>  Mon, 05 Mar 2018 16:25:22 +0200
+
 connui-internet (2.75.1) unstable; urgency=medium
 
   * add iap_conndlg [Ivaylo Dimitrov]
