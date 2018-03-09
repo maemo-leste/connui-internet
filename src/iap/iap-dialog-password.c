@@ -180,7 +180,7 @@ iap_dialog_password_response_cb(GtkDialog *dialog, gint response_id,
 
         if (val)
         {
-          gconf_value_set_int(val, (gint)val);
+          gconf_value_set_int(val, 0);
           iap_settings_set_gconf_value(data->iap_name,
                                        "EAP_MSCHAPV2_password_prompt", val);
           gconf_value_free(val);
