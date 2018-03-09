@@ -1,3 +1,9 @@
+connui-internet (2.75.4) fremantle; urgency=low
+
+  * make others dialog actually work
+
+ -- Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>  Fri, 09 Mar 2018 18:58:55 +0200
+
 connui-internet (2.75.3) fremantle; urgency=low
 
   * add connui-iapsettings
