@@ -1,0 +1,63 @@
+<?xml version="1.0"?>
+<gconfschemafile>
+	<schemalist>
+		<schema>
+			<key>/schemas/system/osso/connectivity/ui/auto_connect/01_always_ask/label</key>
+			<applyto>/system/osso/connectivity/ui/auto_connect/01_always_ask/label</applyto>
+			<owner>connui-internet</owner>
+			<type>string</type>
+			<default>conn_set_fi_conn_set_always_ask</default>
+			<locale name="C"><short>Auto connect option label</short></locale>
+		</schema>
+		<schema>
+			<key>/schemas/system/osso/connectivity/ui/auto_connect/01_always_ask/gettext_catalog</key>
+			<applyto>/system/osso/connectivity/ui/auto_connect/01_always_ask/gettext_catalog</applyto>
+			<owner>connui-internet</owner>
+			<type>string</type>
+			<default>osso-connectivity-ui</default>
+			<locale name="C"><short>Auto connect option gettext catalog</short></locale>
+		</schema>
+		<schema>
+			<key>/schemas/system/osso/connectivity/ui/auto_connect/01_always_ask/network_types</key>
+			<applyto>/system/osso/connectivity/ui/auto_connect/01_always_ask/network_types</applyto>
+			<owner>connui-internet</owner>
+			<type>list</type>
+			<list_type>string</list_type>
+			<default>[]</default>
+			<locale name="C"><short>Auto connect option network types</short></locale>
+		</schema>
+		<schema>
+			<key>/schemas/system/osso/connectivity/ui/auto_connect/90_any/label</key>
+			<applyto>/system/osso/connectivity/ui/auto_connect/90_any/label</applyto>
+			<owner>connui-internet</owner>
+			<type>string</type>
+			<default>conn_set_fi_conn_set_any</default>
+			<locale name="C"><short>Auto connect option label</short></locale>
+		</schema>
+		<schema>
+			<key>/schemas/system/osso/connectivity/ui/auto_connect/90_any/not_found_banner</key>
+			<applyto>/system/osso/connectivity/ui/auto_connect/90_any/not_found_banner</applyto>
+			<owner>connui-internet</owner>
+			<type>string</type>
+			<default>conn_ib_net_no_saved_iaps</default>
+			<locale name="C"><short>Auto connect option not found banner</short></locale>
+		</schema>
+		<schema>
+			<key>/schemas/system/osso/connectivity/ui/auto_connect/90_any/gettext_catalog</key>
+			<applyto>/system/osso/connectivity/ui/auto_connect/90_any/gettext_catalog</applyto>
+			<owner>connui-internet</owner>
+			<type>string</type>
+			<default>osso-connectivity-ui</default>
+			<locale name="C"><short>Auto connect option gettext catalog</short></locale>
+		</schema>
+		<schema>
+			<key>/schemas/system/osso/connectivity/ui/auto_connect/90_any/network_types</key>
+			<applyto>/system/osso/connectivity/ui/auto_connect/90_any/network_types</applyto>
+			<owner>connui-internet</owner>
+			<type>list</type>
+			<list_type>string</list_type>
+			<default>[*]</default>
+			<locale name="C"><short>Auto connect option network types</short></locale>
+		</schema>
+	</schemalist>
+</gconfschemafile>

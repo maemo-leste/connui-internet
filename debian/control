@@ -9,8 +9,8 @@ Package: connui-statusbar-internet
 Architecture: any
 Section: x11
 Replaces: osso-connectivity-ui-statusbar
-Depends: ${shlibs:Depends}, ${misc:Depends}, osso-icons-default | osso-icons, osso-connectivity-ui-l10n-mr | osso-connectivity-ui-l10n-mr0, libconnui
 Conflicts: osso-connectivity-ui-statusbar
+Depends: ${shlibs:Depends}, ${misc:Depends}, osso-icons-default | osso-icons, osso-connectivity-ui-l10n-mr | osso-connectivity-ui-l10n-mr0
 Description: Internet Connectivity statusbar plugin
  This package provides the Internet Connectivity statusbar plugin.
 
@@ -40,3 +40,15 @@ Description: Internet connectivity plugins for Connectivity Dialogs daemon
  Dialogs daemon.
  .
  This package contains the debug symbols.
+
+Package: connui-iapsettings
+Architecture: any
+Section: x11
+Conflicts: osso-connectivity-ui-iapsettings
+Replaces: osso-connectivity-ui-iapsettings
+Depends: ${shlibs:Depends}, ${misc:Depends}, osso-connectivity-ui-l10n-mr | osso-connectivity-ui-l10n-mr0
+Description: Internet Settings UI for Hildon Control Panel
+ This package provides the Internet Settings UI that allows you to create,
+ edit and delete Internet Access Point configurations. It also allows you
+ to tune some generic ICd parameters like connection timeouts and preferred
+ IAP

@@ -18,6 +18,7 @@ AC_CONFIG_FILES([
 	src/status-menu-item/Makefile
 	src/settings/Makefile
 	src/iap/Makefile
+	data/Makefile
 ])
 
 AC_ISC_POSIX
@@ -26,6 +27,7 @@ AM_PROG_CC_STDC
 AC_HEADER_STDC
 AC_DISABLE_STATIC
 AC_PROG_LIBTOOL
+AM_GCONF_SOURCE_2
 
 PKG_CHECK_MODULES(OSSO_AF_SETTINGS, osso-af-settings)
 PKG_CHECK_MODULES(LIBHILDON, libhildondesktop-1)
