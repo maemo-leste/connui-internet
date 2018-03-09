@@ -21,4 +21,7 @@ libiap_dialog_password_la_SOURCES = iap-dialog-password.c
 
 libiap_dialog_others_la_SOURCES = iap-dialog-others.c
 libiap_dialog_others_la_CFLAGS = $(AM_CFLAGS) $(MCE_CFLAGS) $(CONBTUI_CFLAGS)
-libiap_dialog_others_la_LIBADD = $(LIBHILDON_LIBS) $(CONNUI_LIBS) $(MCE_LIBS) $(CONBTUI_LIBS)
+libiap_dialog_others_la_LIBADD = \
+				$(LIBHILDON_LIBS) $(CONNUI_LIBS) \
+				$(MCE_LIBS) $(CONBTUI_LIBS) \
+				$(top_builddir)/src/settings/libconnui_iapsettings.la
