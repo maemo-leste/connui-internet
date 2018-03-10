@@ -92,3 +92,48 @@ iap_widgets_create_static_picker_button(const gchar *title,
 
   return button;
 }
+
+GtkWidget *
+iap_widgets_create_h22_entry(void)
+{
+  return hildon_entry_new(HILDON_SIZE_FINGER_HEIGHT);
+}
+
+const gchar *
+iap_widgets_h22_entry_get_text(GtkWidget *entry)
+{
+  if (HILDON_IS_ENTRY(entry))
+    return hildon_entry_get_text(HILDON_ENTRY(entry));
+  else
+    return gtk_entry_get_text(GTK_ENTRY(entry));
+}
+
+void
+iap_widgets_h22_entry_set_text(GtkWidget *entry, const gchar *text)
+{
+  if (HILDON_IS_ENTRY(entry))
+    hildon_entry_set_text(HILDON_ENTRY(entry), text);
+  else
+    gtk_entry_set_text(GTK_ENTRY(entry), text);
+}
+
+GtkWidget *
+iap_widgets_create_static_combo_box(const gchar *text1, ...)
+{
+  GtkWidget *combo_box = gtk_combo_box_new_text();
+  va_list ap;
+
+  va_start(ap, text1);
+
+  while (text1)
+  {
+    gtk_combo_box_append_text(GTK_COMBO_BOX(combo_box), text1);
+    text1 = va_arg(ap, const gchar *);
+  }
+
+  va_end(ap);
+
+  gtk_combo_box_set_active(GTK_COMBO_BOX(combo_box), FALSE);
+
+  return combo_box;
+}
