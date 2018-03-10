@@ -13,4 +13,8 @@ iap_widgets_insert_text_no_8bit_maxval_reach(GtkEditable *editable,
                                              gpointer position,
                                              gpointer user_data);
 
+GtkWidget *
+iap_widgets_create_static_picker_button(const gchar *title,
+                                        const gchar *text1, ...);
+
 #endif // WIDGETS_H

@@ -55,3 +55,40 @@ iap_widgets_insert_text_no_8bit_maxval_reach(GtkEditable *editable,
                                             "conn_ib_maxval_reach"));
   }
 }
+
+static void
+iap_widgets_picker_button_set_nonactive(GtkWidget *button)
+{
+  hildon_picker_button_set_active(HILDON_PICKER_BUTTON(button), FALSE);
+  hildon_button_set_alignment(HILDON_BUTTON(button), 0.0, 0.5, 1.0, 1.0);
+}
+
+GtkWidget *
+iap_widgets_create_static_picker_button(const gchar *title,
+                                        const gchar *text1, ...)
+{
+  GtkWidget *selector;
+  GtkWidget *button;
+  va_list ap;
+
+  va_start(ap, text1);
+
+  selector = hildon_touch_selector_new_text();
+  button = hildon_picker_button_new(HILDON_SIZE_FINGER_HEIGHT,
+                                    HILDON_BUTTON_ARRANGEMENT_HORIZONTAL);
+  hildon_picker_button_set_selector(HILDON_PICKER_BUTTON(button),
+                                    HILDON_TOUCH_SELECTOR(selector));
+
+  while (text1)
+  {
+    hildon_touch_selector_append_text(HILDON_TOUCH_SELECTOR(selector), text1);
+    text1 = va_arg(ap, const gchar *);
+  }
+
+  hildon_button_set_title(HILDON_BUTTON(button), title);
+  iap_widgets_picker_button_set_nonactive(button);
+
+  va_end(ap);
+
+  return button;
+}
