@@ -36,6 +36,7 @@ iap_widgets_insert_text_no_8bit_maxval_reach(GtkEditable *editable,
                                              gpointer user_data)
 {
   int i;
+  GtkEntry *entry = GTK_ENTRY(editable);
 
   if (new_text_length < 0)
     new_text_length = strlen(new_text);
@@ -49,8 +50,25 @@ iap_widgets_insert_text_no_8bit_maxval_reach(GtkEditable *editable,
     }
   }
 
-  if (new_text_length + GTK_ENTRY(editable)->text_length >
-      GTK_ENTRY(editable)->text_max_length)
+  if (new_text_length + entry->text_length > entry->text_max_length)
+  {
+    hildon_banner_show_information(GTK_WIDGET(user_data), NULL,
+                                   dgettext("osso-connectivity-ui",
+                                            "conn_ib_maxval_reach"));
+  }
+}
+
+void
+iap_widgets_insert_text_maxval_reach(GtkEditable *editable, gchar *new_text,
+                                     gint new_text_length, gpointer position,
+                                     gpointer user_data)
+{
+  GtkEntry *entry = GTK_ENTRY(editable);
+
+  if (new_text_length < 0)
+    new_text_length = strlen(new_text);
+
+  if (new_text_length + entry->text_length > entry->text_max_length)
   {
     hildon_banner_show_information(GTK_WIDGET(user_data), NULL,
                                    dgettext("osso-connectivity-ui",
