@@ -429,15 +429,7 @@ stage_get_bytearray(const struct stage *s, const gchar *key)
   guint8 *rv;
   GConfValue *val;
 
-  if (!s)
-    return NULL;
-
-  if (!s->impl)
-    return NULL;
-
-  val = s->impl->get(s, key);
-
-  if (!val)
+  if (!s || !s->impl || !(val = s->impl->get(s, key)))
     return NULL;
 
   if (val->type == GCONF_VALUE_STRING)
@@ -488,15 +480,7 @@ stage_get_bool(const struct stage *s, const gchar *key)
   GConfValue *val;
   gboolean rv;
 
-  if (!s)
-    return FALSE;
-
-  if (!s->impl)
-    return FALSE;
-
-  val = s->impl->get(s, key);
-
-  if (!val)
+  if (!s || !s->impl || !(val = s->impl->get(s, key)))
     return FALSE;
 
   if (val->type == GCONF_VALUE_BOOL)
@@ -524,21 +508,13 @@ stage_get_int(const struct stage *s, const gchar *key)
   GConfValue *val;
   int rv;
 
-  if (!s)
-    return FALSE;
-
-  if (!s->impl)
-    return FALSE;
-
-  val = s->impl->get(s, key);
-
-  if (!val)
-    return FALSE;
+  if (!s || !s->impl || !(val = s->impl->get(s, key)))
+    return 0;
 
   if (val->type == GCONF_VALUE_INT)
     rv = gconf_value_get_int(val);
   else
-    rv = FALSE;
+    rv = 0;
 
   gconf_value_free(val);
 
@@ -551,5 +527,34 @@ stage_set_int(struct stage *s, const gchar *key, int ival)
   GConfValue *val = gconf_value_new(GCONF_VALUE_INT);
 
   gconf_value_set_int(val, ival);
+  s->impl->set(s, key, val);
+}
+
+/* string */
+gchar *
+stage_get_string(const struct stage *s, const gchar *key)
+{
+  GConfValue *val;
+  gchar *rv;
+
+  if (!s || !s->impl || !(val = s->impl->get(s, key)))
+    return NULL;
+
+  if (val->type == GCONF_VALUE_STRING)
+    rv = g_strdup(gconf_value_get_string(val));
+  else
+    rv = NULL;
+
+  gconf_value_free(val);
+
+  return rv;
+}
+
+void
+stage_set_string(struct stage *s, const gchar *key, const gchar *sval)
+{
+  GConfValue *val = gconf_value_new(GCONF_VALUE_STRING);
+
+  gconf_value_set_string(val, sval);
   s->impl->set(s, key, val);
 }
