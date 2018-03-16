@@ -404,9 +404,9 @@ stage_dump_cache(struct stage *s, GByteArray *array)
         {
           for (l1 = list; l1; l1 = l1->next)
           {
-            int i = gconf_value_get_int((const GConfValue *)list->data);
+            guint8 i = gconf_value_get_int((const GConfValue *)list->data);
 
-            g_byte_array_append(array, (const guint8 *)&i, sizeof(i));
+            g_byte_array_append(array, &i, sizeof(i));
           }
         }
         break;
@@ -423,24 +423,24 @@ stage_dump_cache(struct stage *s, GByteArray *array)
 /* get/set functions */
 
 /* bytearray */
-guint8 *
+gchar *
 stage_get_bytearray(const struct stage *s, const gchar *key)
 {
-  guint8 *rv;
+  gchar *rv;
   GConfValue *val;
 
   if (!s || !s->impl || !(val = s->impl->get(s, key)))
     return NULL;
 
   if (val->type == GCONF_VALUE_STRING)
-    return (guint8 *)g_strdup(gconf_value_get_string(val));
+    return g_strdup(gconf_value_get_string(val));
   else if (val->type == GCONF_VALUE_LIST &&
            gconf_value_get_list_type(val) == GCONF_VALUE_INT)
   {
     GSList *l = gconf_value_get_list(val);
     int i;
 
-    rv = (guint8 *)g_malloc0(g_slist_length(l) + 1);
+    rv = g_new0(gchar, g_slist_length(l) + 1);
 
     for (i = 0; l; l = l->next)
       rv[i++] = gconf_value_get_int((const GConfValue *)l->data);
@@ -454,7 +454,7 @@ stage_get_bytearray(const struct stage *s, const gchar *key)
 }
 
 void
-stage_set_bytearray(struct stage *s, const gchar *key, const guint8 *data)
+stage_set_bytearray(struct stage *s, const gchar *key, const gchar *data)
 {
   GSList *l = NULL;
   GConfValue *val;
@@ -557,4 +557,57 @@ stage_set_string(struct stage *s, const gchar *key, const gchar *sval)
 
   gconf_value_set_string(val, sval);
   s->impl->set(s, key, val);
+}
+
+/* stringlist */
+gchar **
+stage_get_stringlist(const struct stage *s, const gchar *key)
+{
+  gchar **rv;
+  GConfValue *val;
+
+  if (!s || !s->impl || !(val = s->impl->get(s, key)))
+    return NULL;
+
+  if (val->type == GCONF_VALUE_LIST &&
+      gconf_value_get_list_type(val) == GCONF_VALUE_STRING)
+  {
+    GSList *l = gconf_value_get_list(val);
+    int i = 0;
+
+    rv = g_new0(gchar *, g_slist_length(l) + 1);
+
+    while (l)
+      rv[i++] = g_strdup(gconf_value_get_string((const GConfValue *)l->data));
+
+    rv[i] = NULL;
+  }
+  else
+    rv = NULL;
+
+  gconf_value_free(val);
+
+  return rv;
+}
+
+void
+stage_set_stringlist(struct stage *s, const gchar *key, const gchar **lval)
+{
+  GSList *l = NULL;
+  GConfValue *val;
+
+  while(*lval)
+  {
+    val = gconf_value_new(GCONF_VALUE_STRING);
+
+    gconf_value_set_string(val, *lval++);
+    l = g_slist_prepend(l, val);
+  }
+
+  l = g_slist_reverse(l);
+  val = gconf_value_new(GCONF_VALUE_LIST);
+  gconf_value_set_list_type(val, GCONF_VALUE_STRING);
+  gconf_value_set_list(val, l);
+  s->impl->set(s, key, val);
+  g_slist_free(l);
 }

@@ -120,7 +120,7 @@ iap_widgets_create_h22_entry(void)
 }
 
 const gchar *
-iap_widgets_h22_entry_get_text(GtkWidget *entry)
+iap_widgets_h22_entry_get_text(const GtkWidget *entry)
 {
   if (HILDON_IS_ENTRY(entry))
     return hildon_entry_get_text(HILDON_ENTRY(entry));

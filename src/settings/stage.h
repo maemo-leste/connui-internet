@@ -26,13 +26,19 @@ void stage_create_for_iap(struct stage *s, const gchar *iap);
 void stage_free(struct stage *s);
 
 /* get/set functions */
-guint8 *stage_get_bytearray(const struct stage *s, const gchar *key);
-void stage_set_bytearray(struct stage *s, const gchar *key, const guint8 *data);
+gchar *stage_get_bytearray(const struct stage *s, const gchar *key);
+void stage_set_bytearray(struct stage *s, const gchar *key, const gchar *data);
 
 gboolean stage_get_bool(const struct stage *s, const gchar *key);
 void stage_set_bool(struct stage *s, const gchar *key, gboolean bval);
 
 int stage_get_int(const struct stage *s, const gchar *key);
 void stage_set_int(struct stage *s, const gchar *key, int ival);
+
+gchar *stage_get_string(const struct stage *s, const gchar *key);
+void stage_set_string(struct stage *s, const gchar *key, const gchar *sval);
+
+gchar **stage_get_stringlist(const struct stage *s, const gchar *key);
+void stage_set_stringlist(struct stage *s, const gchar *key, const gchar **lval);
 
 #endif // STAGE_H

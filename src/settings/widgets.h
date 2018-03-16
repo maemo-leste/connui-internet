@@ -24,7 +24,7 @@ GtkWidget *iap_widgets_create_static_combo_box(const gchar *text1, ...);
 
 /* h22 entry */
 GtkWidget *iap_widgets_create_h22_entry(void);
-const gchar * iap_widgets_h22_entry_get_text(GtkWidget *entry);
+const gchar * iap_widgets_h22_entry_get_text(const GtkWidget *entry);
 void iap_widgets_h22_entry_set_text(GtkWidget *entry, const gchar *text);
 
 /* certificate widgets */
