@@ -46,6 +46,7 @@ MAPPER(entry, string);
 MAPPER(entry, bytearray);
 MAPPER(numbereditor, int);
 MAPPER(toggle, int);
+MAPPER(toggle, bool);
 #endif
 
 #endif // MAPPER_H

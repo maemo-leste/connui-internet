@@ -88,3 +88,31 @@ int2toggle(const struct stage *s, GtkWidget *entry,
   gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(entry),
                                stage_get_int(s, sw->key));
 }
+
+static void
+toggle2bool(struct stage *s, const GtkWidget *entry,
+            const struct stage_widget *sw)
+{
+  if (GTK_IS_TOGGLE_BUTTON(entry))
+  {
+    stage_set_bool(s, sw->key,
+                   gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(entry)));
+  }
+  else if (HILDON_IS_CHECK_BUTTON(entry))
+  {
+    stage_set_bool(s, sw->key,
+                   hildon_check_button_get_active(HILDON_CHECK_BUTTON(entry)));
+  }
+}
+
+static void
+bool2toggle(const struct stage *s, GtkWidget *entry,
+            const struct stage_widget *sw)
+{
+  gboolean bval = stage_get_bool(s, sw->key);
+
+  if (GTK_IS_TOGGLE_BUTTON(entry))
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(entry), bval);
+  else if (HILDON_IS_CHECK_BUTTON(entry))
+    hildon_check_button_set_active(HILDON_CHECK_BUTTON(entry), bval);
+}
