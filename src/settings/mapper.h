@@ -14,7 +14,7 @@ struct stage_widget
   const gchar *key;
   void* unk1;
   struct widget_mapper *mapper;
-  const gchar *delimiters;
+  const gchar *sep;
 };
 
 typedef void (* widget2stage_fn)(struct stage *s, const GtkWidget *entry, const struct stage_widget *sw);
@@ -41,12 +41,11 @@ struct widget_mapper mapper_##from##2##to = {from##2##to, to##2##from}
 #define MAPPER(from, to) extern struct widget_mapper mapper_##from##2##to;
 #endif
 
-#ifdef MAPPER_STOCK_IMPL
 MAPPER(entry, string);
+MAPPER(entry, stringlist);
 MAPPER(entry, bytearray);
 MAPPER(numbereditor, int);
 MAPPER(toggle, int);
 MAPPER(toggle, bool);
-#endif
 
 #endif // MAPPER_H

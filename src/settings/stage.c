@@ -611,3 +611,20 @@ stage_set_stringlist(struct stage *s, const gchar *key, const gchar **lval)
   s->impl->set(s, key, val);
   g_slist_free(l);
 }
+
+GConfValue *
+stage_get_val(const struct stage *s, const gchar *key)
+{
+  GConfValue *val;
+
+  if (!s && !s->impl && (val = s->impl->get(s, key)))
+    return gconf_value_copy(val);
+
+  return NULL;
+}
+
+void
+stage_set_val(struct stage *s, const gchar *key, GConfValue *val)
+{
+  s->impl->set(s, key, val);
+}

@@ -116,3 +116,74 @@ bool2toggle(const struct stage *s, GtkWidget *entry,
   else if (HILDON_IS_CHECK_BUTTON(entry))
     hildon_check_button_set_active(HILDON_CHECK_BUTTON(entry), bval);
 }
+
+static void
+stringlist2entry(const struct stage *s, GtkWidget *entry,
+                 const struct stage_widget *sw)
+{
+
+  GString *string = string = g_string_new(NULL);
+  GConfValue *val = stage_get_val(s, sw->key);
+  gchar *str;
+
+  if (val)
+  {
+    if (val->type == GCONF_VALUE_LIST &&
+        gconf_value_get_list_type(val) == GCONF_VALUE_STRING)
+    {
+      GSList *l;
+
+      for (l = gconf_value_get_list(val); l; l = l->next)
+      {
+        if (string->len + 1 >= string->allocated_len)
+          g_string_insert_c(string, -1, *sw->sep);
+        else
+        {
+          string->str[string->len++] = *sw->sep;
+          string->str[string->len] = 0;
+        }
+
+        g_string_append(string,
+                        gconf_value_get_string((const GConfValue *)l->data));
+      }
+    }
+
+    gconf_value_free(val);
+  }
+
+  str = g_string_free(string, FALSE);
+
+  if (str && strlen(str) > 1)
+    iap_widgets_h22_entry_set_text(entry, str + 1);
+  else
+    iap_widgets_h22_entry_set_text(entry, "");
+
+  g_free(str);
+}
+
+static void
+entry2stringlist(struct stage *s, const GtkWidget *entry,
+                 const struct stage_widget *sw)
+{
+  GSList *l = NULL;
+  GConfValue *val;
+  gchar **arr =
+      g_strsplit_set(iap_widgets_h22_entry_get_text(entry), sw->sep, 0);
+
+  while (*arr)
+  {
+    val = gconf_value_new(GCONF_VALUE_STRING);
+
+    gconf_value_set_string(val, *arr);
+    l = g_slist_prepend(l, val);
+    arr++;
+  }
+
+  g_strfreev(arr);
+
+  val = gconf_value_new(GCONF_VALUE_LIST);
+  gconf_value_set_list_type(val, GCONF_VALUE_STRING);
+  gconf_value_set_list_nocopy(val, g_slist_reverse(l));
+
+  stage_set_val(s, sw->key, val);
+}

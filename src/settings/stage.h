@@ -5,7 +5,7 @@ struct stage_implementation;
 
 struct stage
 {
-  int ink1;
+  int unk1;
   gchar *name;
   gchar *dir;
   GConfClient *gconf;
@@ -40,5 +40,8 @@ void stage_set_string(struct stage *s, const gchar *key, const gchar *sval);
 
 gchar **stage_get_stringlist(const struct stage *s, const gchar *key);
 void stage_set_stringlist(struct stage *s, const gchar *key, const gchar **lval);
+
+GConfValue *stage_get_val(const struct stage *s, const gchar *key);
+void stage_set_val(struct stage *s, const gchar *key, GConfValue *val);
 
 #endif // STAGE_H
