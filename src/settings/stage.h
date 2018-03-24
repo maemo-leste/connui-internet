@@ -1,6 +1,8 @@
 #ifndef STAGE_H
 #define STAGE_H
 
+#include <gconf/gconf-client.h>
+
 struct stage_implementation;
 
 struct stage
@@ -23,6 +25,7 @@ typedef void (*stage_free_fn)(struct stage *s);
 void stage_create_cache(struct stage *cache, const struct stage *s);
 void stage_create_for_path(struct stage *s, const gchar *path);
 void stage_create_for_iap(struct stage *s, const gchar *iap);
+void stage_copy(const struct stage *src, struct stage *dest);
 void stage_free(struct stage *s);
 
 /* get/set functions */

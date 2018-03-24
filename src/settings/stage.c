@@ -302,6 +302,12 @@ stage_create_for_iap(struct stage *s, const gchar *iap)
 }
 
 void
+stage_copy(const struct stage *src, struct stage *dest)
+{
+  src->impl->copy(src, dest);
+}
+
+void
 stage_free(struct stage *s)
 {
   GSList *l;
