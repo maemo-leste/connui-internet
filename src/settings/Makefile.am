@@ -6,6 +6,8 @@ lib_LTLIBRARIES = libconnui_iapsettings.la
 libconnui_iapsettings_la_SOURCES = widgets.c \
 				   stage.c \
 				   mapper.c \
-				   wizard.c
+				   easy_gprs.c \
+				   wizard.c \
+				   advanced.c
 
 libconnui_iapsettings_la_LIBADD = $(LIBHILDON_LIBS) $(CONNUI_LIBS) $(MCE_LIBS)

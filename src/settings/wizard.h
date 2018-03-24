@@ -15,8 +15,12 @@ GtkWidget *iap_wizard_get_widget(struct iap_wizard *iw, const gchar *id);
 void iap_wizzard_create_page(const gchar *id, struct iap_wizard_page *wp, struct iap_wizard *iw);
 void iap_wizard_set_empty_values(struct iap_wizard *iw);
 void iap_wizard_set_start_page(struct iap_wizard *iw, const gchar *page_id);
+gboolean iap_wizard_set_current_page(struct iap_wizard *iw, const gchar *id);
+int iap_wizard_get_import_mode(struct iap_wizard *iw);
+void iap_wizard_set_import_mode(struct iap_wizard *iw, int mode);
 
 struct iap_wizard *iap_wizard_create(gpointer user_data, GtkWindow *parent);
+void iap_wizard_show(struct iap_wizard *iw);
 void iap_wizard_destroy(struct iap_wizard *iw);
 
 #endif // WIZARD_H

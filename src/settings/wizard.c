@@ -9,18 +9,15 @@
 #include "mapper.h"
 #include "wizard.h"
 #include "stage.h"
+#include "advanced.h"
 
-struct iap_wizzard_advanced
+enum wizzard_button
 {
-  int gap0;
-  int dialog;
-  int field_8;
-  int field_C;
-  GHashTable *widgets;
-  int field_14;
-  int field_18;
-  int import_mode;
-  int field_20;
+  WIZARD_BUTTON_FINISH = 0,
+  WIZARD_BUTTON_PREVIOUS = 1,
+  WIZARD_BUTTON_NEXT = 2,
+  WIZARD_BUTTON_CLOSE = 3,
+  WIZARD_BUTTON_ADVANCED = 4
 };
 
 struct iap_wizard
@@ -40,7 +37,7 @@ struct iap_wizard
   struct stage_widget *stage_widgets;
   struct stage *stage;
   int unk1;
-  struct iap_wizzard_advanced *advanced;
+  struct iap_wizard_advanced *advanced;
   int import_mode;
   int unk2;
   gchar *iap_id;
@@ -54,9 +51,9 @@ struct iap_wizard_page
   gchar *id;
   gchar *msgid;
   GtkWidget * (*create)(struct iap_wizard *iw);
-  gchar * (*next)(struct iap_wizard *iw, guint current);
+  gchar * (*get_page)(struct iap_wizard *iw, guint current);
   void (*finish)(struct iap_wizard *iw);
-  gchar *unk1;
+  void (*prev)(struct iap_wizard *iw);
   gchar *next_page;
   gchar *unk2;
   gpointer priv;
@@ -70,14 +67,15 @@ struct iap_wizard_plugin
   GHashTable *widgets;
   struct stage_widget *stage_widgets;
   gpointer priv;
-  int field_18;
+  const gchar **(*get_widgets)(gpointer);
   int get_page;
-  int field_20;
-  int field_24;
-  int field_28;
-  int field_2C;
-  gboolean advanced_closed;
+  int get_advanced;
+  int dump;
+  int restore;
+  int advanced_show;
+  gboolean advanced_done;
 };
+
 
 
 GtkWidget *
@@ -147,8 +145,8 @@ iap_wizard_get_next_page(struct iap_wizard *iw, const void *page_name,
 
   if (wizzard_page)
   {
-    if (wizzard_page->next)
-      return wizzard_page->next(wizzard_page->priv, current);
+    if (wizzard_page->get_page)
+      return wizzard_page->get_page(wizzard_page->priv, current);
     else
       return wizzard_page->next_page;
   }
@@ -365,6 +363,110 @@ iap_wizard_complete_page_finish(struct iap_wizard *iw)
   iap_wizard_set_completed(iw, TRUE);
 }
 
+static int
+iap_wizard_plugins_sort_cb(const struct iap_wizard_plugin *a,
+                           const struct iap_wizard_plugin *b)
+{
+  if (a->prio == b->prio)
+    return 0;
+
+  if (a->prio < b->prio)
+    return 1;
+
+  return -1;
+}
+
+static void
+iap_wizard_name_and_type_page_name_changed_cb(GtkEntry *entry,
+                                              struct iap_wizard *iw)
+{
+  iap_wizard_validate_finish_button(iw);
+}
+
+static void
+iap_wizard_plugins_button_toggled_cb(GtkToggleButton *button,
+                                     struct iap_wizard *iw)
+{
+  if (gtk_toggle_button_get_active(button))
+    iap_wizard_validate_finish_button(iw);
+}
+
+static GtkWidget *
+iap_wizard_name_and_type_page_create(struct iap_wizard *iw)
+{
+  GtkWidget *entry;
+  GtkWidget *label;
+  GtkWidget *caption;
+  GtkWidget *vbox;
+  GtkSizeGroup *size_group;
+  GSList *l;
+  GSList *plugins = g_slist_sort(g_slist_copy(iw->plugins),
+                                 (GCompareFunc)iap_wizard_plugins_sort_cb);
+
+  vbox = gtk_vbox_new(FALSE, 0);
+  size_group = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
+  entry = gtk_entry_new();
+  g_hash_table_insert(iw->widgets, g_strdup("NAME"), entry);
+  g_signal_connect(G_OBJECT(entry), "changed",
+                   G_CALLBACK(iap_wizard_name_and_type_page_name_changed_cb),
+                   iw);
+
+  caption = hildon_caption_new(size_group,
+                               dgettext("osso-connectivity-ui",
+                                        "conn_set_iap_fi_conn_name"),
+                               entry, NULL, HILDON_CAPTION_OPTIONAL);
+  g_hash_table_insert(iw->widgets, g_strdup("NAME_CAPTION"), caption);
+  gtk_box_pack_start(GTK_BOX(vbox), caption, FALSE, FALSE, 0);
+
+  label = gtk_label_new("");
+  gtk_misc_set_alignment(GTK_MISC(label), 0.0, 0.0);
+  g_hash_table_insert(iw->widgets, g_strdup("TYPE"), label);
+
+  caption = hildon_caption_new(size_group,
+                               dgettext("osso-connectivity-ui",
+                                        "conn_set_iap_bd_conn_type"),
+                               label, NULL, HILDON_CAPTION_OPTIONAL);
+  g_hash_table_insert(iw->widgets, g_strdup("TYPE_CAPTION"), caption);
+  gtk_box_pack_start(GTK_BOX(vbox), caption, FALSE, FALSE, 0);
+
+  for (l = plugins; l; l = l->next)
+  {
+    struct iap_wizard_plugin *plugin = (struct iap_wizard_plugin *)l->data;
+
+    if (plugin->get_widgets)
+    {
+      const gchar **plugin_widgets = plugin->get_widgets(plugin->priv);
+
+      if (plugin_widgets)
+      {
+        int idx = 0;
+        GtkWidget *button = NULL;
+
+        while (plugin_widgets[idx])
+        {
+          gchar *id = g_strdup_printf("%s%d", plugin->name, idx);
+
+          button = gtk_radio_button_new_from_widget(GTK_RADIO_BUTTON(button));
+          g_signal_connect(G_OBJECT(button), "toggled",
+                           G_CALLBACK(iap_wizard_plugins_button_toggled_cb),
+                           iw);
+          g_hash_table_insert(iw->widgets, id, button);
+
+          caption = hildon_caption_new(size_group, plugin_widgets[idx],
+                                       button, NULL, HILDON_CAPTION_OPTIONAL);
+          gtk_box_pack_start(GTK_BOX(vbox), caption, FALSE, FALSE, 0);
+          idx++;
+        }
+      }
+    }
+  }
+
+  g_slist_free(plugins);
+  g_object_unref(G_OBJECT(size_group));
+
+  return vbox;
+}
+
 static struct iap_wizard_page iap_wizard_pages[] =
 {
   {"WELCOME",
@@ -446,24 +548,92 @@ iap_wizzard_notebook_switch_page_cb(GtkNotebook *notebook, gpointer arg1,
       if (sensitive)
         sensitive = strcmp(id, "NAME_AND_TYPE");
 
-      gtk_dialog_set_response_sensitive(dialog, 1, sensitive);
+      gtk_dialog_set_response_sensitive(dialog, WIZARD_BUTTON_PREVIOUS,
+                                        sensitive);
 
       if (g_str_has_suffix(id, "COMPLETE"))
         sensitive = FALSE;
-      else if (page->next)
+      else if (page->get_page)
         sensitive = TRUE;
       else if (page->next_page)
         sensitive = TRUE;
       else
         sensitive = FALSE;
 
-      gtk_dialog_set_response_sensitive(dialog, 2, sensitive);
+      gtk_dialog_set_response_sensitive(dialog, WIZARD_BUTTON_NEXT, sensitive);
 
       if (page->finish)
         page->finish(page->priv);
     }
     else
       ULOG_ERR("Unable to find page %s!", id);
+  }
+}
+
+static void
+iap_wizzard_export_widgets(struct iap_wizard *iw)
+{
+  mapper_export_widgets(iw->stage, iw->stage_widgets,
+                        (mapper_get_widget_fn)iap_wizard_get_widget, iw);
+}
+
+static void
+iap_wizard_dialog_response_cb(GtkDialog *dialog, gint response_id,
+                              gpointer user_data)
+{
+  struct iap_wizard *iw = (struct iap_wizard *)user_data;
+  const gchar *id = iap_wizard_get_current_page(iw);
+  struct iap_wizard_page *page =
+      (struct iap_wizard_page *)g_hash_table_lookup(iw->pages, id);
+  const gchar *next_page;
+
+  if (!page)
+  {
+    ULOG_ERR("Unable to find current page %s!", id);
+    return;
+  }
+
+  if (response_id != WIZARD_BUTTON_NEXT &&
+      response_id != WIZARD_BUTTON_ADVANCED)
+  {
+    if (page->prev)
+      page->prev(page->priv);
+  }
+
+  iw->response_id = response_id;
+
+  switch (response_id)
+  {
+    case WIZARD_BUTTON_FINISH:
+      iap_wizard_get_next_page(iw, NULL, 0);
+      break;
+    case WIZARD_BUTTON_PREVIOUS:
+      iap_wizard_get_next_page(iw, NULL, 0);
+      iw->current_page--;
+      gtk_notebook_set_current_page(iw->notebook,
+                                    iw->page_index[iw->current_page]);
+      break;
+    case WIZARD_BUTTON_NEXT:
+      next_page = iap_wizard_get_next_page(iw, id, 1);
+
+      if (next_page)
+      {
+        if (page->prev)
+          page->prev(page->priv);
+
+        if (iw->stage)
+          iap_wizzard_export_widgets(iw);
+
+        iw->current_page++;
+        iap_wizard_set_current_page(iw, next_page);
+      }
+      break;
+    case WIZARD_BUTTON_ADVANCED:
+      iap_wizzard_export_widgets(iw);
+      iap_wizard_dialog_activate_advanced_settings(iw);
+      break;
+    default:
+      break;
   }
 }
 
@@ -491,16 +661,16 @@ iap_wizard_create(gpointer user_data, GtkWindow *parent)
   iw->button_finish = gtk_dialog_add_button(dialog,
                                             dgettext("hildon-libs",
                                                      "wdgt_bd_finish"),
-                                            0);
+                                            WIZARD_BUTTON_FINISH);
   gtk_dialog_add_button(dialog,
                         dgettext("hildon-libs",
                                  "wdgt_bd_previous"),
-                        1);
+                        WIZARD_BUTTON_PREVIOUS);
   iw->button_next = gtk_dialog_add_button(dialog,
                                           dgettext("hildon-libs",
                                                    "wdgt_bd_next"),
-                                          2);
-  iap_common_set_close_response(iw->dialog, 3);
+                                          WIZARD_BUTTON_NEXT);
+  iap_common_set_close_response(iw->dialog, WIZARD_BUTTON_CLOSE);
 
   iw->notebook = GTK_NOTEBOOK(gtk_notebook_new());
 
@@ -668,4 +838,61 @@ iap_wizard_set_empty_values(struct iap_wizard *iw)
 
   iap_wizard_set_start_page(iw, "WELCOME");
   iap_wizard_validate_finish_button(iw);
+}
+
+void
+iap_wizard_show(struct iap_wizard *iw)
+{
+  const char *id;
+
+  gtk_widget_show_all(iw->dialog);
+  gtk_notebook_set_current_page(iw->notebook, iw->page_index[iw->current_page]);
+
+  id = iw->page_ids[iw->page_index[iw->current_page]];
+
+  if (iw->advanced)
+    iap_advanced_show(iw->advanced);
+  else if (id && !strcmp(id, "WELCOME"))
+    gtk_widget_grab_focus(iw->button_next);
+
+  iap_wizard_validate_finish_button(iw);
+}
+
+gboolean
+iap_wizard_set_current_page(struct iap_wizard *iw, const gchar *id)
+{
+  int idx = 0;
+
+  while (iw->page_ids[idx] && strcmp(iw->page_ids[idx], id))
+    idx++;
+
+  if (iw->page_ids[idx])
+  {
+    iw->page_index[iw->current_page] = idx;
+    gtk_notebook_set_current_page(iw->notebook, idx);
+    iap_wizard_validate_finish_button(iw);
+    return TRUE;
+  }
+
+  ULOG_ERR("Unable to find page %s!", id);
+
+  return FALSE;
+}
+
+int
+iap_wizard_get_import_mode(struct iap_wizard *iw)
+{
+  if (iw->advanced)
+    return iw->advanced->import_mode;
+
+  return iw->import_mode;
+}
+
+void
+iap_wizard_set_import_mode(struct iap_wizard *iw, int mode)
+{
+  if (iw->advanced)
+    iw->advanced->import_mode = mode;
+  else
+    iw->import_mode = mode;
 }
