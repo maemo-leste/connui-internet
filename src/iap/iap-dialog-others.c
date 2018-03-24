@@ -343,7 +343,7 @@ iap_dialog_others_show(int iap_id, DBusMessage *message,
     settings_name = iap_settings_get_name(data.iap_name);
     dialog = gtk_dialog_new_with_buttons(
           dgettext("osso-connectivity-ui", "conn_set_iap_ti_wlan_ent_wpa_psk"),
-          0, GTK_DIALOG_NO_SEPARATOR,
+          NULL, GTK_DIALOG_NO_SEPARATOR,
           dgettext("hildon-libs", "wdgt_bd_done"), GTK_RESPONSE_OK,
           NULL);
 
