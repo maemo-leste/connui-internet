@@ -187,3 +187,62 @@ entry2stringlist(struct stage *s, const GtkWidget *entry,
 
   stage_set_val(s, sw->key, val);
 }
+
+void
+mapper_import_widgets(struct stage *s, struct stage_widget *sw,
+                      mapper_get_widget_fn get_widget, gpointer user_data)
+{
+  const gchar *id;
+
+  while ((id = sw->name))
+  {
+    const GtkWidget *widget = get_widget(user_data, id);
+
+    if (widget)
+    {
+      if (!sw->needs_sync || sw->needs_sync(s, sw->name, sw->key))
+      {
+        if (sw->import)
+          sw->import(user_data, s, sw);
+
+        sw->mapper->widget2stage(s, widget, sw);
+      }
+    }
+
+    sw++;
+  }
+}
+
+void
+mapper_export_widgets(struct stage *s, struct stage_widget *sw,
+                      mapper_get_widget_fn get_widget, gpointer user_data)
+{
+  GHashTable *hash = g_hash_table_new(g_str_hash, g_str_equal);
+  const gchar *id;
+
+  while ((id = sw->name))
+  {
+    GtkWidget *widget = get_widget(user_data, id);
+
+    if (widget)
+    {
+      if (sw->needs_sync && !sw->needs_sync(s, sw->name, sw->key))
+      {
+        if ((!sw->export || sw->export(s, sw->name, sw->key)) &&
+            !g_hash_table_lookup(hash, sw->key))
+        {
+          stage_set_val(s, sw->key, NULL);
+        }
+      }
+      else
+      {
+        sw->mapper->stage2widget(s, widget, sw);
+        g_hash_table_insert(hash, (gpointer)sw->key, GINT_TO_POINTER(TRUE));
+      }
+    }
+
+    sw++;
+  }
+
+  g_hash_table_destroy(hash);
+}

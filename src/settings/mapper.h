@@ -8,11 +8,11 @@ struct widget_mapper;
 
 struct stage_widget
 {
-  gboolean (*f1)(struct stage *, const gchar *, const gchar *);
-  gboolean (*f2)(struct stage *, const gchar *, const gchar *);
+  gboolean (*export)(struct stage *, const gchar *, const gchar *);
+  gboolean (*needs_sync)(struct stage *, const gchar *, const gchar *);
   const gchar *name;
   const gchar *key;
-  void* unk1;
+  void (*import)(gpointer, struct stage *, struct stage_widget *);
   struct widget_mapper *mapper;
   const gchar *sep;
 };
@@ -52,10 +52,9 @@ MAPPER(toggle, bool);
 #undef MAPPER
 #define MAPPER(from, to) MAPPER_IMPL(from, to)
 
-typedef GtkWidget *(*mapper_get_widget_fn)(gpointer, const gchar *);
+typedef GtkWidget *(*mapper_get_widget_fn)(gpointer user_data, const gchar *id);
 
 void mapper_export_widgets(struct stage *s, struct stage_widget *sw, mapper_get_widget_fn get_widget, gpointer user_data);
 void mapper_import_widgets(struct stage *s, struct stage_widget *sw, mapper_get_widget_fn get_widget, gpointer user_data);
-
 
 #endif // MAPPER_H

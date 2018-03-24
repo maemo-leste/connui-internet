@@ -8,7 +8,6 @@
 #include "mapper.h"
 #include "widgets.h"
 
-
 MAPPER(hildoncheck, bool);
 
 struct easy_gprs
