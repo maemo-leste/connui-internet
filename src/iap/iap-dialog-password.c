@@ -274,7 +274,8 @@ iap_dialog_password_show(int iap_id, DBusMessage *message,
                      hildon_caption_new(size_group,
                                         dgettext("osso-connectivity-ui",
                                                  "conn_set_iap_fi_username"),
-                                        GTK_WIDGET(data.username_entry), 0, 0),
+                                        GTK_WIDGET(data.username_entry), NULL,
+                                        HILDON_CAPTION_OPTIONAL),
                      FALSE, FALSE, 0);
 
   /* password */
@@ -287,7 +288,8 @@ iap_dialog_password_show(int iap_id, DBusMessage *message,
                      hildon_caption_new(size_group,
                                         dgettext("osso-connectivity-ui",
                                                  "conn_set_iap_fi_password"),
-                                        GTK_WIDGET(data.password_entry), 0, 0),
+                                        GTK_WIDGET(data.password_entry), NULL,
+                                        HILDON_CAPTION_OPTIONAL),
                      FALSE, FALSE, 0);
 
   /* check button */
@@ -297,7 +299,8 @@ iap_dialog_password_show(int iap_id, DBusMessage *message,
                      hildon_caption_new(NULL,
                                         dgettext("osso-connectivity-ui",
                                                  "conn_set_iap_fi_ask_pw_every"),
-                                        GTK_WIDGET(data.check_button), 0, 0),
+                                        GTK_WIDGET(data.check_button), NULL,
+                                        HILDON_CAPTION_OPTIONAL),
                      FALSE, FALSE, 0);
 
   g_object_unref(size_group);
