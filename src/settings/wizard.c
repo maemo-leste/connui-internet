@@ -76,8 +76,6 @@ struct iap_wizard_plugin
   gboolean advanced_done;
 };
 
-
-
 GtkWidget *
 iap_wizard_get_dialog(struct iap_wizard *iw)
 {
