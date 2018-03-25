@@ -6,6 +6,7 @@ lib_LTLIBRARIES = libconnui_iapsettings.la
 libconnui_iapsettings_la_SOURCES = widgets.c \
 				   stage.c \
 				   mapper.c \
+				   easy-wlan.c \
 				   easy-gprs.c \
 				   wizard.c \
 				   advanced.c
