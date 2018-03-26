@@ -18,6 +18,13 @@ struct int2combo_foreach_data
   GtkWidget *widget;
 };
 
+struct string2combo_foreach_data
+{
+  gchar *str;
+  gint col;
+  GtkWidget *widget;
+};
+
 static void
 entry2string(struct stage *s, const GtkWidget *entry,
              const struct stage_widget *sw)
@@ -357,6 +364,97 @@ combo2int(struct stage *s, const GtkWidget *entry,
     stage_set_int(s, sw->key, ival);
   else
     stage_set_val(s, sw->key, NULL);
+}
+
+static gboolean
+string2combo_foreach_fn(GtkTreeModel *model, GtkTreePath *path,
+                        GtkTreeIter *iter, gpointer userdata)
+{
+  struct string2combo_foreach_data *data =
+      (struct string2combo_foreach_data *)userdata;
+  gboolean rv;
+  gchar *str;
+
+  gtk_tree_model_get(model, iter, data->col, &str, -1);
+
+  if (str && !strcmp(data->str, str))
+  {
+    set_active_iter(data->widget, iter);
+    rv = TRUE;
+  }
+  else
+    rv = FALSE;
+
+  g_free(str);
+
+  return rv;
+}
+
+static void
+string2combo(const struct stage *s, GtkWidget *entry,
+             const struct stage_widget *sw)
+{
+  gchar *str = stage_get_string(s, sw->key);
+  const gchar **strlist = (const gchar **)sw->priv;
+
+  if (GPOINTER_TO_INT(sw->priv) < 16)
+  {
+    if (str)
+    {
+      struct string2combo_foreach_data data;
+
+      data.str = str;
+      data.col = GPOINTER_TO_INT(sw->priv);
+      data.widget = entry;
+
+      gtk_tree_model_foreach(get_model(entry), string2combo_foreach_fn, &data);
+    }
+    else
+      set_active(entry, 0);
+  }
+  else
+  {
+    int i = 0;
+
+    if (str)
+    {
+      while (*strlist && strcmp(*strlist, str))
+        i++;
+    }
+
+    if (!*strlist)
+      i = 0;
+
+    set_active(entry, i);
+  }
+
+  g_free(str);
+}
+
+static void
+combo2string(struct stage *s, const GtkWidget *entry,
+             const struct stage_widget *sw)
+{
+  const gchar **strlist = (const gchar **)sw->priv;
+  gchar *str = NULL;
+  GtkTreeIter iter;
+
+  if (GPOINTER_TO_INT(sw->priv) > 15)
+  {
+    gint active = get_active(entry);
+
+    if (active >= 0)
+      str = g_strdup(strlist[active]);
+  }
+  else if (is_selected(entry, &iter))
+    gtk_tree_model_get(get_model(entry), &iter, sw->priv, &str, -1);
+
+  if (str)
+    stage_set_string(s, sw->key, str);
+  else
+    stage_set_val(s, sw->key, NULL);
+
+  g_free(str);
 }
 
 void
