@@ -11,6 +11,13 @@
 
 #include "mapper.h"
 
+struct int2combo_foreach_data
+{
+  int ival;
+  gint col;
+  GtkWidget *widget;
+};
+
 static void
 entry2string(struct stage *s, const GtkWidget *entry,
              const struct stage_widget *sw)
@@ -136,10 +143,10 @@ stringlist2entry(const struct stage *s, GtkWidget *entry,
       for (l = gconf_value_get_list(val); l; l = l->next)
       {
         if (string->len + 1 >= string->allocated_len)
-          g_string_insert_c(string, -1, *sw->sep);
+          g_string_insert_c(string, -1, *(gchar *)sw->priv);
         else
         {
-          string->str[string->len++] = *sw->sep;
+          string->str[string->len++] = *(gchar *)sw->priv;
           string->str[string->len] = 0;
         }
 
@@ -167,8 +174,8 @@ entry2stringlist(struct stage *s, const GtkWidget *entry,
 {
   GSList *l = NULL;
   GConfValue *val;
-  gchar **arr =
-      g_strsplit_set(iap_widgets_h22_entry_get_text(entry), sw->sep, 0);
+  gchar **arr = g_strsplit_set(iap_widgets_h22_entry_get_text(entry),
+                               (gchar *)sw->priv, 0);
 
   while (*arr)
   {
@@ -188,6 +195,170 @@ entry2stringlist(struct stage *s, const GtkWidget *entry,
   stage_set_val(s, sw->key, val);
 }
 
+static gint
+get_active(const GtkWidget *widget)
+{
+  if (GTK_IS_COMBO_BOX(widget))
+    return gtk_combo_box_get_active(GTK_COMBO_BOX(widget));
+  else if (HILDON_IS_PICKER_BUTTON(widget))
+    return hildon_picker_button_get_active(HILDON_PICKER_BUTTON(widget));
+
+  g_warning("No combobox nor picker button");
+
+  return 0;
+}
+
+static gboolean
+is_selected(const GtkWidget *widget, GtkTreeIter *iter)
+{
+  if (GTK_IS_COMBO_BOX(widget))
+    return gtk_combo_box_get_active_iter(GTK_COMBO_BOX(widget), iter);
+  else if (HILDON_IS_PICKER_BUTTON(widget))
+  {
+    return hildon_touch_selector_get_selected(
+          hildon_picker_button_get_selector(HILDON_PICKER_BUTTON(widget)), 0,
+          iter);
+  }
+
+  g_warning("No combobox nor picker button");
+
+  return FALSE;
+}
+
+static GtkTreeModel *
+get_model(const GtkWidget *widget)
+{
+  if (GTK_IS_COMBO_BOX(widget))
+    return gtk_combo_box_get_model(GTK_COMBO_BOX(widget));
+  else if (HILDON_IS_PICKER_BUTTON(widget))
+  {
+    return hildon_touch_selector_get_model(
+          hildon_picker_button_get_selector(HILDON_PICKER_BUTTON(widget)), 0);
+  }
+
+  g_warning("No combobox nor picker button");
+
+  return NULL;
+}
+
+static void
+set_active_iter(GtkWidget *widget, GtkTreeIter *iter)
+{
+  if (GTK_IS_COMBO_BOX(widget))
+  {
+    gtk_combo_box_set_active_iter(GTK_COMBO_BOX(widget), iter);
+  }
+  else if (HILDON_IS_PICKER_BUTTON(widget))
+  {
+    hildon_touch_selector_select_iter(
+          hildon_picker_button_get_selector(HILDON_PICKER_BUTTON(widget)), 0,
+          iter, 0);
+  }
+  else
+    g_warning("No combobox nor picker button");
+}
+
+static void
+set_active(GtkWidget *widget, gint index)
+{
+  if (GTK_IS_COMBO_BOX(widget))
+    gtk_combo_box_set_active(GTK_COMBO_BOX(widget), index);
+  else if (HILDON_IS_PICKER_BUTTON(widget))
+    hildon_picker_button_set_active(HILDON_PICKER_BUTTON(widget), index);
+  else
+    g_warning("No combobox nor picker button");
+}
+
+static gboolean
+int2combo_foreach_fn(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter,
+                     gpointer userdata)
+{
+  struct int2combo_foreach_data *data =
+      (struct int2combo_foreach_data *)userdata;
+  int ival;
+
+  gtk_tree_model_get(model, iter, data->col, &ival, -1);
+
+  if (data->ival != ival)
+    return FALSE;
+
+  set_active_iter(data->widget, iter);
+
+  return TRUE;
+}
+
+static void
+int2combo(const struct stage *s, GtkWidget *entry,
+          const struct stage_widget *sw)
+{
+  gint ival = stage_get_int(s, sw->key);
+  gint *priv = (gint *)sw->priv;
+
+  if (GPOINTER_TO_INT(priv) <= 16)
+  {
+    if (priv)
+    {
+      struct int2combo_foreach_data data;
+
+      data.ival = ival;
+      data.col = GPOINTER_TO_INT(priv);
+      data.widget = entry;
+      set_active(entry, 0);
+      gtk_tree_model_foreach(get_model(entry), int2combo_foreach_fn, &data);
+    }
+    else
+    {
+      if (ival > gtk_tree_model_iter_n_children(get_model(entry), 0))
+        ival = 0;
+
+      set_active(entry, ival);
+    }
+  }
+  else
+  {
+    int i;
+
+    for (i = 0; priv[i] != -1; i++)
+    {
+      if (ival == priv[i])
+        break;
+    }
+
+    if (priv[i] == -1)
+      i = 0;
+
+    set_active(entry, i);
+  }
+}
+
+static void
+combo2int(struct stage *s, const GtkWidget *entry,
+          const struct stage_widget *sw)
+{
+  const gint *priv = sw->priv;
+  int ival = -1;
+
+  if (GPOINTER_TO_INT(priv) > 16)
+    ival = priv[get_active(entry)];
+  else
+  {
+    if (priv)
+    {
+      GtkTreeIter iter;
+
+      if (is_selected(entry, &iter))
+        gtk_tree_model_get(get_model(entry), &iter, sw->priv, &ival, -1);
+    }
+    else
+      ival = get_active(entry);
+  }
+
+  if (ival >= 0)
+    stage_set_int(s, sw->key, ival);
+  else
+    stage_set_val(s, sw->key, NULL);
+}
+
 void
 mapper_import_widgets(struct stage *s, struct stage_widget *sw,
                       mapper_get_widget_fn get_widget, gpointer user_data)
@@ -200,7 +371,7 @@ mapper_import_widgets(struct stage *s, struct stage_widget *sw,
 
     if (widget)
     {
-      if (!sw->needs_sync || sw->needs_sync(s, sw->name, sw->key))
+      if (!sw->validate || sw->validate(s, sw->name, sw->key))
       {
         if (sw->import)
           sw->import(user_data, s, sw);
@@ -226,7 +397,7 @@ mapper_export_widgets(struct stage *s, struct stage_widget *sw,
 
     if (widget)
     {
-      if (sw->needs_sync && !sw->needs_sync(s, sw->name, sw->key))
+      if (sw->validate && !sw->validate(s, sw->name, sw->key))
       {
         if ((!sw->export || sw->export(s, sw->name, sw->key)) &&
             !g_hash_table_lookup(hash, sw->key))

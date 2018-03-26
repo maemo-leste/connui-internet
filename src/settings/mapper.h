@@ -9,12 +9,12 @@ struct widget_mapper;
 struct stage_widget
 {
   gboolean (*export)(struct stage *, const gchar *, const gchar *);
-  gboolean (*needs_sync)(struct stage *, const gchar *, const gchar *);
+  gboolean (*validate)(const struct stage *, const gchar *, const gchar *);
   const gchar *name;
   const gchar *key;
   void (*import)(gpointer, struct stage *, struct stage_widget *);
-  struct widget_mapper *mapper;
-  const gchar *sep;
+  const struct widget_mapper *mapper;
+  const gpointer priv;
 };
 
 typedef void (* widget2stage_fn)(struct stage *s, const GtkWidget *entry, const struct stage_widget *sw);
@@ -48,6 +48,8 @@ MAPPER(entry, bytearray);
 MAPPER(numbereditor, int);
 MAPPER(toggle, int);
 MAPPER(toggle, bool);
+MAPPER(combo, int);
+MAPPER(combo, string);
 
 #undef MAPPER
 #define MAPPER(from, to) MAPPER_IMPL(from, to)
