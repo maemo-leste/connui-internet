@@ -1,7 +1,9 @@
 #include <hildon/hildon.h>
-#include <wlancond.h>
 #include <osso-ic-gconf.h>
 #include <connui/connui.h>
+#include <connui/wlan-common.h>
+#include <connui/connui-log.h>
+#include <wlancond.h>
 
 #include <ctype.h>
 #include <string.h>
@@ -10,6 +12,8 @@
 #include "stage.h"
 #include "widgets.h"
 #include "mapper.h"
+
+#include "easy-wlan.h"
 
 #define _(msgid) dgettext("osso-connectivity-ui", msgid)
 
@@ -90,7 +94,7 @@ iap_easy_wlan_wpa_eap_type_done_cb(struct easy_wlan *ewlan)
   GtkWidget *eap_type;
   gint active;
   /* not sure about those are the corerect defines, FIXME */
-  guint security[] = {WLANCOND_WPA_TKIP, 0x400000, WLANCOND_WPA_AES};
+  guint security[] = {0x10000000, 0x400000, 0x20000000};
 
   eap_type = iap_easy_wlan_get_widget(ewlan, "EAP_TYPE");
   active = hildon_picker_button_get_active(HILDON_PICKER_BUTTON(eap_type));
@@ -305,11 +309,11 @@ iap_easy_wlan_wepkey_verify_response_cb(GtkDialog *dialog, gint response_id,
     int len = strlen(wep_key);
     const char *msg;
 
-    if (len == 5 || len == 13)
+    if (len == WLANCOND_MIN_KEY_LEN || len == WLANCOND_MAX_KEY_LEN)
       return;
 
     {
-      if (len == 10 || len == 26)
+      if (len == 2 * WLANCOND_MIN_KEY_LEN || len == 2 * WLANCOND_MAX_KEY_LEN)
       {
         int i;
 
@@ -412,4 +416,352 @@ iap_easy_wlan_dialog_run(struct easy_wlan *ewlan, const gchar *title,
   gtk_widget_destroy(dialog);
 
   return resp_id;
+}
+
+guint
+iap_security_from_wlan_security(guint wlancond_capability)
+{
+  guint iap_security;
+
+  if (wlancond_capability & WLAN_CAP_ADHOCWLAN)
+    iap_security = 0x40;
+  else
+    iap_security = 0x80;
+
+  if (wlancond_capability & WLAN_CAP_SECURITY_WPA_EAP)
+    return ~((unsigned int)~(iap_security << 12) >> 12);
+
+  if (wlancond_capability & WLAN_CAP_SECURITY_WPA_PSK)
+    return iap_security | 0x80000;
+
+  if (wlancond_capability & WLAN_CAP_SECURITY_WEP)
+    return iap_security | 0x20000;
+
+  return iap_security | 0x10000;
+}
+
+static const gint eap_types[] = {254, 0, 55, 42, 0, 0, 0, 1, -1};
+
+static struct stage_widget iap_easy_wlan_wepkey_widgets[] =
+{
+  {
+    NULL,
+    NULL,
+    "WEP_KEY1",
+    "wlan_wepkey1",
+    NULL,
+    &mapper_entry2string,
+    NULL
+  },
+  { NULL, NULL, NULL, NULL, NULL, NULL, NULL }
+};
+
+static struct stage_widget iap_easy_wlan_ent_wpa_psk_widgets[] =
+{
+  {
+    NULL,
+    NULL,
+    "WPA_PSK_KEY",
+    "EAP_wpa_preshared_passphrase",
+    NULL,
+    &mapper_entry2string,
+    NULL
+  },
+  { NULL, NULL, NULL, NULL, NULL, NULL, NULL }
+};
+
+static const gint EAP_default_type[] = {25, 13, 21, -1};
+
+static struct stage_widget iap_easy_wlan_wpa_eap_type_widgets[] =
+{
+  {
+    NULL,
+    NULL,
+    "EAP_TYPE",
+    "EAP_default_type",
+    NULL,
+    &mapper_combo2int,
+    &EAP_default_type
+  },
+  { NULL, NULL, NULL, NULL, NULL, NULL, NULL }
+};
+
+static struct stage_widget iap_easy_wlan_wpa_eap_tls_auth_widgets[] =
+{
+  {
+    NULL,
+    NULL,
+    "EAP_CERTIFICATE",
+    "EAP_TLS_PEAP_client_certificate_file",
+    NULL,
+    &mapper_combo2string,
+    GINT_TO_POINTER(1)
+  },
+  { NULL, NULL, NULL, NULL, NULL, NULL, NULL }
+};
+
+static const gint PEAP_tunneled_eap_type[] = {6, 26, 99, 98, -1};
+
+static struct stage_widget iap_easy_wlan_wpa_eap_ttls_auth_widgets[] =
+{
+  {
+    NULL,
+    NULL,
+    "EAP_CERTIFICATE",
+    "EAP_TLS_PEAP_client_certificate_file",
+    NULL,
+    &mapper_combo2string,
+    GINT_TO_POINTER(1)
+  },
+  {
+    NULL,
+    NULL,
+    "EAP_TUNNELED_TYPE",
+    "PEAP_tunneled_eap_type",
+    NULL,
+    &mapper_combo2int,
+    &PEAP_tunneled_eap_type
+  }
+};
+
+static gboolean
+EAP_MSCHAPV2_validate(const struct stage *s, const gchar *name,
+                      const gchar *key)
+{
+  int eap_type = stage_get_int(s, "PEAP_tunneled_eap_type");
+
+  return eap_type == 99 || eap_type == 26 || eap_type == 98;
+}
+
+static gboolean
+EAP_GTC_validate(const struct stage *s,const gchar *name, const gchar *key)
+{
+  return stage_get_int(s, "PEAP_tunneled_eap_type") == 6;
+}
+
+static struct stage_widget iap_easy_wlan_wpa_eap_leap_widgets[] =
+{
+  {
+    NULL,
+    EAP_MSCHAPV2_validate,
+    "EAP_USERNAME",
+    "EAP_MSCHAPV2_username",
+    NULL,
+    &mapper_entry2string,
+    NULL
+  },
+  {
+    NULL,
+    EAP_MSCHAPV2_validate,
+    "EAP_PASSWORD",
+    "EAP_MSCHAPV2_password",
+    NULL,
+    &mapper_entry2string,
+    NULL
+  },
+  {
+    NULL,
+    EAP_GTC_validate,
+    "EAP_USERNAME",
+    "EAP_GTC_identity",
+    NULL,
+    &mapper_entry2string,
+    NULL
+  },
+  { NULL, NULL, NULL, NULL, NULL, NULL, NULL }
+};
+
+static gint
+iap_run_easy_wlan_get_security(struct easy_wlan *ewlan,
+                               guint wlancond_capability)
+{
+  gint resp_id = GTK_RESPONSE_OK;
+  const gchar *wlan_security;
+
+  if (wlancond_capability & 0x1E00)
+  {
+    GSList *l = NULL;
+    GConfValue *val = gconf_value_new(GCONF_VALUE_LIST);
+    int i = 0;
+
+    while (eap_types[i] != -1)
+    {
+      GConfValue *v = gconf_value_new(GCONF_VALUE_INT);
+
+      gconf_value_set_int(v, eap_types[i]);
+      l = g_slist_append(l, v);
+      i++;
+    };
+
+    gconf_value_set_list_type(val, GCONF_VALUE_INT);
+    gconf_value_set_list_nocopy(val, l);
+    stage_set_val(&ewlan->stage, "EAP_default_type", val);
+    wlan_security = "WPA_EAP";
+  }
+  else if (ewlan->security == 0x10000)
+    wlan_security = "NONE";
+  else if (ewlan->security == 0xFFF00000)
+  {
+    resp_id =
+        iap_easy_wlan_dialog_run(ewlan,
+                                 _("conn_set_iap_ti_wlan_sel_wpa_eap_type"),
+                                 NULL,
+                                 iap_easy_wlan_wpa_eap_type_add_widgets_cb,
+                                 iap_easy_wlan_wpa_eap_type_done_cb,
+                                 iap_easy_wlan_wpa_eap_type_widgets);
+    wlan_security = "WPA_EAP";
+  }
+  else if (ewlan->security == 0x20000)
+  {
+    resp_id =
+        iap_easy_wlan_dialog_run(ewlan,
+                                 _("conn_set_iap_ti_wlan_ent_wepkey"),
+                                 iap_easy_wlan_wepkey_verify_response_cb,
+                                 iap_easy_wlan_wepkey_add_widgets_cb, NULL,
+                                 iap_easy_wlan_wepkey_widgets);
+    wlan_security = "WEP";
+  }
+  else if (ewlan->security == 0x80000)
+  {
+    resp_id =
+        iap_easy_wlan_dialog_run(ewlan,
+                                 _("conn_set_iap_ti_wlan_ent_wpa_psk"),
+                                 iap_easy_wlan_ent_wpa_psk_verify_response_cb,
+                                 iap_easy_wlan_ent_wpa_psk_add_widgets_cb,
+                                 NULL,
+                                 iap_easy_wlan_ent_wpa_psk_widgets);
+    wlan_security = "WPA_PSK";
+  }
+  else
+  {
+    CONNUI_ERR("invalid security mode! %d", ewlan->security);
+    resp_id = GTK_RESPONSE_CANCEL;
+  }
+
+  if (resp_id != GTK_RESPONSE_CANCEL)
+    stage_set_string(&ewlan->stage, "wlan_security", wlan_security);
+
+  return resp_id;
+}
+
+static gint
+iap_run_easy_wlan_get_auth(struct easy_wlan *ewlan)
+{
+  gint resp_id = GTK_RESPONSE_OK;
+
+  if (ewlan->security == 0x20000000 || ewlan->security == 0x10000000)
+  {
+    const char *msgeap =
+        ewlan->security == 0x20000000 ?
+          "conn_set_iap_ti_wlan_wpa_eap_ttls_auth" :
+          "conn_set_iap_ti_wlan_wpa_eap_peap_auth";
+
+    resp_id = iap_easy_wlan_dialog_run(
+          ewlan, _(msgeap), 0, iap_easy_wlan_wpa_eap_ttls_auth_add_widgets_cb,
+          iap_easy_wlan_wpa_eap_ttls_auth_done_cb,
+          iap_easy_wlan_wpa_eap_ttls_auth_widgets);
+  }
+  else if (ewlan->security == 0x400000)
+  {
+    resp_id = iap_easy_wlan_dialog_run(
+          ewlan, _("conn_set_iap_ti_wlan_wpa_eap_tls_auth"), NULL,
+          iap_easy_wlan_wpa_eap_tls_auth_add_widgets_cb, NULL,
+          iap_easy_wlan_wpa_eap_tls_auth_widgets);
+  }
+  else if (ewlan->security & 0xB800000)
+  {
+    resp_id = iap_easy_wlan_dialog_run(
+          ewlan, ewlan->security & 0x800000 ?
+            _("conn_set_iap_ti_wlan_wpa_eap_leap") :
+            _("conn_set_iap_ti_wlan_wpa_eap_leap2"),
+          NULL,
+          iap_easy_wlan_wpa_eap_leap_add_widgets_cb, NULL,
+          iap_easy_wlan_wpa_eap_leap_widgets);
+  }
+
+  return resp_id;
+}
+
+gchar *
+iap_run_easy_wlan_dialogs(osso_context_t *libosso, GtkWindow *parent,
+                          const gchar *network_id, guint *wlancond_capability)
+{
+  guint iap_security;
+  const gchar *ssid;
+  gint resp_id;
+  gboolean is_hidden;
+  struct easy_wlan ewlan;
+  gchar *hidden_ssid = NULL;
+
+  g_return_val_if_fail(wlancond_capability != NULL, NULL);
+
+  iap_security = iap_security_from_wlan_security(*wlancond_capability);
+  memset(&ewlan, 0, sizeof(ewlan));
+
+  if (!network_id && !*network_id)
+  {
+    if (iap_hidden_ssid_dialog(parent, &hidden_ssid, wlancond_capability) ||
+        !*wlancond_capability)
+    {
+      is_hidden = TRUE;
+      ewlan.network_id = g_strdup(hidden_ssid);
+      iap_security = iap_security_from_wlan_security(*wlancond_capability);
+    }
+    else
+      return NULL;
+  }
+  else
+  {
+    is_hidden = FALSE;
+    ewlan.network_id = g_strdup(network_id);
+  }
+
+  ewlan.parent = parent;
+  ewlan.security = iap_security >> 16 << 16;
+  ewlan.widgets = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+  wlan_common_mangle_ssid(ewlan.network_id, strlen(ewlan.network_id));
+  stage_create_cache(&ewlan.stage, NULL);
+
+  if (iap_security & 0x40)
+    stage_set_string(&ewlan.stage, "type", "WLAN_ADHOC");
+  else
+    stage_set_string(&ewlan.stage, "type", "WLAN_INFRA");
+
+  if (!hidden_ssid)
+    ssid = network_id;
+  else
+    ssid = hidden_ssid;
+
+  stage_set_bytearray(&ewlan.stage, "wlan_ssid", ssid);
+  stage_set_bool(&ewlan.stage, "wlan_hidden", is_hidden);
+  stage_set_string(&ewlan.stage, "ipv4_type", "AUTO");
+  stage_set_string(&ewlan.stage, "proxytype", "NONE");
+  stage_set_bool(&ewlan.stage, "temporary", TRUE);
+  g_free(hidden_ssid);
+
+  resp_id = iap_run_easy_wlan_get_security(&ewlan, *wlancond_capability);
+
+  if (resp_id != GTK_RESPONSE_CANCEL)
+    resp_id = iap_run_easy_wlan_get_auth(&ewlan);
+
+  if (resp_id != GTK_RESPONSE_CANCEL)
+  {
+    struct stage s;
+
+    ewlan.iap_id = iap_settings_create_iap_id();
+    stage_create_for_iap(&s, ewlan.iap_id);
+    stage_copy(&ewlan.stage, &s);
+    stage_free(&s);
+  }
+
+  stage_free(&ewlan.stage);
+  g_free(ewlan.network_id);
+  g_hash_table_destroy(ewlan.widgets);
+
+  if (resp_id != GTK_RESPONSE_CANCEL)
+    return ewlan.iap_id;
+
+  g_free(ewlan.iap_id);
+
+  return NULL;
 }

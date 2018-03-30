@@ -18,6 +18,8 @@ void iap_wizard_set_start_page(struct iap_wizard *iw, const gchar *page_id);
 gboolean iap_wizard_set_current_page(struct iap_wizard *iw, const gchar *id);
 int iap_wizard_get_import_mode(struct iap_wizard *iw);
 void iap_wizard_set_import_mode(struct iap_wizard *iw, int mode);
+GtkWidget *iap_wizard_export(struct iap_wizard *iw, struct stage *s, gboolean reconnect);
+void iap_wizard_save_state(struct iap_wizard *iw, GByteArray *state);
 
 struct iap_wizard *iap_wizard_create(gpointer user_data, GtkWindow *parent);
 void iap_wizard_show(struct iap_wizard *iw);

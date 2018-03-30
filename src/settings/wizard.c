@@ -36,14 +36,16 @@ struct iap_wizard
   GSList *plugin_modules;
   struct stage_widget *stage_widgets;
   struct stage *stage;
-  int unk1;
+  struct iap_wizard_plugin *plugin;
   struct iap_wizard_advanced *advanced;
   int import_mode;
   int unk2;
   gchar *iap_id;
-  int current_page;
-  int page_index[8];
-  gboolean in_progress;
+  struct {
+    int current;
+    int index[8];
+    gboolean in_progress;
+  } page;
 };
 
 struct iap_wizard_page
@@ -70,10 +72,10 @@ struct iap_wizard_plugin
   const gchar **(*get_widgets)(gpointer);
   int get_page;
   int get_advanced;
-  int dump;
+  void (*save_state)(gpointer priv, GByteArray *state);
   int restore;
   int advanced_show;
-  gboolean advanced_done;
+  void (*advanced_done)(gpointer);
 };
 
 GtkWidget *
@@ -125,7 +127,7 @@ iap_wizard_select_plugin_label(struct iap_wizard *iw, gchar *name, guint idx)
 void
 iap_wizard_set_completed(struct iap_wizard *iw, gboolean completed)
 {
-  iw->in_progress = !completed;
+  iw->page.in_progress = !completed;
   iap_wizard_validate_finish_button(iw);
 }
 
@@ -165,7 +167,7 @@ iap_wizard_validate_finish_button(struct iap_wizard *iw)
                                           dgettext("osso-connectivity-ui",
                                                    "conn_ib_compl_all"));
 
-    if (!iw->in_progress)
+    if (!iw->page.in_progress)
     {
       const gchar *name_text = gtk_entry_get_text(
             GTK_ENTRY(GTK_WIDGET(g_hash_table_lookup(iw->widgets, "NAME"))));
@@ -607,9 +609,9 @@ iap_wizard_dialog_response_cb(GtkDialog *dialog, gint response_id,
       break;
     case WIZARD_BUTTON_PREVIOUS:
       iap_wizard_get_next_page(iw, NULL, 0);
-      iw->current_page--;
+      iw->page.current--;
       gtk_notebook_set_current_page(iw->notebook,
-                                    iw->page_index[iw->current_page]);
+                                    iw->page.index[iw->page.current]);
       break;
     case WIZARD_BUTTON_NEXT:
       next_page = iap_wizard_get_next_page(iw, id, 1);
@@ -622,7 +624,7 @@ iap_wizard_dialog_response_cb(GtkDialog *dialog, gint response_id,
         if (iw->stage)
           iap_wizzard_export_widgets(iw);
 
-        iw->current_page++;
+        iw->page.current++;
         iap_wizard_set_current_page(iw, next_page);
       }
       break;
@@ -651,7 +653,7 @@ iap_wizard_create(gpointer user_data, GtkWindow *parent)
     dialog_flags |= (GTK_DIALOG_DESTROY_WITH_PARENT | GTK_DIALOG_MODAL);
 
   iw->parent = parent;
-  iw->in_progress = TRUE;
+  iw->page.in_progress = TRUE;
 
   iw->dialog = gtk_dialog_new_with_buttons(NULL, parent, dialog_flags, NULL);
   dialog = GTK_DIALOG(iw->dialog);
@@ -811,7 +813,7 @@ iap_wizard_set_start_page(struct iap_wizard *iw, const gchar *page_id)
       return;
   }
 
-  iw->page_index[0] = idx;
+  iw->page.index[0] = idx;
 }
 
 void
@@ -844,9 +846,9 @@ iap_wizard_show(struct iap_wizard *iw)
   const char *id;
 
   gtk_widget_show_all(iw->dialog);
-  gtk_notebook_set_current_page(iw->notebook, iw->page_index[iw->current_page]);
+  gtk_notebook_set_current_page(iw->notebook, iw->page.index[iw->page.current]);
 
-  id = iw->page_ids[iw->page_index[iw->current_page]];
+  id = iw->page_ids[iw->page.index[iw->page.current]];
 
   if (iw->advanced)
     iap_advanced_show(iw->advanced);
@@ -866,7 +868,7 @@ iap_wizard_set_current_page(struct iap_wizard *iw, const gchar *id)
 
   if (iw->page_ids[idx])
   {
-    iw->page_index[iw->current_page] = idx;
+    iw->page.index[iw->page.current] = idx;
     gtk_notebook_set_current_page(iw->notebook, idx);
     iap_wizard_validate_finish_button(iw);
     return TRUE;
@@ -893,4 +895,86 @@ iap_wizard_set_import_mode(struct iap_wizard *iw, int mode)
     iw->advanced->import_mode = mode;
   else
     iw->import_mode = mode;
+}
+
+GtkWidget *
+iap_wizard_export(struct iap_wizard *iw, struct stage *s, gboolean reconnect)
+{
+  const char *msg;
+
+
+  if (iw->plugin && iw->plugin->advanced_done)
+    iw->plugin->advanced_done(iw->plugin->priv);
+
+  iap_wizzard_export_widgets(iw);
+  stage_copy(iw->stage, s);
+
+  if (reconnect)
+    msg = dgettext("osso-connectivity-ui", "conn_ib_settings_saved_reconnect");
+  else
+    msg = dgettext("osso-connectivity-ui", "conn_ib_settings_saved");
+
+  return hildon_banner_show_information(GTK_WIDGET(iw->parent), 0, msg);
+}
+
+static GtkWidget *
+iap_wizard_find_plugin_widget(struct iap_wizard *iw,
+                              struct iap_wizard_plugin *plugin, int idx)
+{
+  gchar *id = g_strdup_printf("%s%d", plugin->name, idx);
+  GtkWidget *widget;
+
+  widget = GTK_WIDGET(g_hash_table_lookup(iw->widgets, id));
+
+  g_free(id);
+
+  return widget;
+}
+
+void
+iap_wizard_save_state(struct iap_wizard *iw, GByteArray *state)
+{
+  GSList *l;
+  struct iap_wizard_plugin *plugin;
+  int idx = 0;
+  guint8 len = 0;
+
+  iap_wizzard_export_widgets(iw);
+  plugin = iap_wizard_find_plugin(iw, &idx);
+
+  if (plugin)
+  {
+    len = strlen(plugin->name) + 1;
+    g_byte_array_append(state, &len, sizeof(len));
+    g_byte_array_append(state, (guint8 *)plugin->name, len);
+    g_byte_array_append(state, (guint8 *)&idx, sizeof(idx));
+  }
+  else
+    g_byte_array_append(state, &len, sizeof(len));
+
+  for (l = iw->plugins; l; l = l->next)
+  {
+    plugin = l->data;
+
+    if (plugin->save_state)
+      plugin->save_state(plugin->priv, state);
+  }
+
+  if (iw->iap_id)
+    len = strlen(iw->iap_id) + 1;
+  else
+    len = 0;
+
+  g_byte_array_append(state, &len, sizeof(len));
+
+  if (len)
+    g_byte_array_append(state, (guint8 *)iw->iap_id, len);
+
+  g_byte_array_append(state, (guint8 *)&iw->page, sizeof(iw->page));
+
+  len = iw->advanced != 0;
+  g_byte_array_append(state, &len, sizeof(len));
+
+  if ( len )
+    iap_advanced_save_state((int)iw->advanced, state);
 }
