@@ -1,18 +1,7 @@
 #ifndef ADVANCED_H
 #define ADVANCED_H
 
-struct iap_wizard_advanced
-{
-  int gap0;
-  GtkWidget *dialog;
-  gint current_page;
-  GtkNotebook *notebook;
-  GHashTable *widgets;
-  struct stage_widget *sw;
-  gpointer field_18;
-  int import_mode;
-  int field_20;
-};
+#include "mapper.h"
 
 struct iap_advanced_widget
 {
@@ -22,10 +11,38 @@ struct iap_advanced_widget
   gchar *auto_proxy_id;
   gchar *msgid;
   GtkWidget *(*create)();
-  gboolean field_18;
+  gboolean is_toggle;
+};
+
+struct iap_advanced_page
+{
+  gboolean not_empty;
+  const gchar *msgid;
+  struct iap_advanced_widget *widgets;
+  void (*activate)(gpointer priv);
+  const gchar *tag;
+  gpointer priv;
+};
+
+struct iap_wizard_advanced
+{
+  gpointer user_data;
+  GtkWidget *dialog;
+  gint current_page;
+  GtkNotebook *notebook;
+  GHashTable *widgets;
+  struct stage_widget *sw;
+  struct iap_advanced_page *pages;
+  int import_mode;
+  struct stage *stage;
 };
 
 void iap_advanced_show(struct iap_wizard_advanced *adv);
 void iap_advanced_destroy(struct iap_wizard_advanced *adv);
+
+void iap_advanced_import(struct iap_wizard_advanced *adv, struct stage *s);
+void iap_advanced_export(struct iap_wizard_advanced *adv, struct stage *s);
+void iap_advanced_save_state(struct iap_wizard_advanced *adv, GByteArray *array);
+gboolean iap_advanced_restore_state(struct iap_wizard_advanced *adv, struct stage_cache *data);
 
 #endif // ADVANCED_H

@@ -332,7 +332,7 @@ stage_free(struct stage *s)
   memset(s, 0, sizeof(*s));
 }
 
-GByteArray *
+void
 stage_dump_cache(struct stage *s, GByteArray *array)
 {
   GSList *l;
@@ -423,7 +423,7 @@ stage_dump_cache(struct stage *s, GByteArray *array)
   }
 
   len = 0;
-  return g_byte_array_append(array, (const guint8 *)&len, sizeof(len));
+  g_byte_array_append(array, (const guint8 *)&len, sizeof(len));
 }
 
 /* get/set functions */

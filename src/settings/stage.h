@@ -16,6 +16,13 @@ struct stage
   int unk2;
 };
 
+struct stage_cache
+{
+  guint8 *data;
+  guint len;
+  guint processed;
+};
+
 typedef void (*stage_copy_fn)(const struct stage *src, struct stage *dest);
 typedef void (*stage_rename_fn)(struct stage *s, const gchar *key);
 typedef GConfValue *(*stage_get_fn)(const struct stage *s, const gchar *key);
@@ -27,6 +34,8 @@ void stage_create_for_path(struct stage *s, const gchar *path);
 void stage_create_for_iap(struct stage *s, const gchar *iap);
 void stage_copy(const struct stage *src, struct stage *dest);
 void stage_free(struct stage *s);
+gboolean stage_restore_cache(struct stage *s, struct stage_cache *array);
+void stage_dump_cache(struct stage *s, GByteArray *array);
 
 /* get/set functions */
 gchar *stage_get_bytearray(const struct stage *s, const gchar *key);

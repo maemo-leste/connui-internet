@@ -8,7 +8,7 @@ libconnui_iapsettings_la_SOURCES = widgets.c \
 				   mapper.c \
 				   easy-wlan.c \
 				   easy-gprs.c \
-				   wizard.c \
-				   advanced.c
+				   advanced.c \
+				   wizard.c
 
 libconnui_iapsettings_la_LIBADD = $(LIBHILDON_LIBS) $(CONNUI_LIBS) $(MCE_LIBS)
