@@ -53,29 +53,12 @@ struct iap_wizard_page
   gchar *id;
   gchar *msgid;
   GtkWidget * (*create)(struct iap_wizard *iw);
-  gchar * (*get_page)(struct iap_wizard *iw, guint current);
+  const char * (*get_page)(struct iap_wizard *iw, guint current);
   void (*finish)(struct iap_wizard *iw);
   void (*prev)(struct iap_wizard *iw);
   gchar *next_page;
   gchar *unk2;
   gpointer priv;
-};
-
-struct iap_wizard_plugin
-{
-  const gchar *name;
-  guint prio;
-  struct iap_wizard_page *pages;
-  GHashTable *widgets;
-  struct stage_widget *stage_widgets;
-  gpointer priv;
-  const gchar **(*get_widgets)(gpointer);
-  int get_page;
-  int get_advanced;
-  void (*save_state)(gpointer priv, GByteArray *state);
-  int restore;
-  int advanced_show;
-  void (*advanced_done)(gpointer);
 };
 
 GtkWidget *
@@ -131,24 +114,23 @@ iap_wizard_set_completed(struct iap_wizard *iw, gboolean completed)
   iap_wizard_validate_finish_button(iw);
 }
 
-static gchar *
+static const char *
 iap_wizard_get_next_page(struct iap_wizard *iw, const void *page_name,
                          guint current)
 {
-  struct iap_wizard_page *wizzard_page;
+  struct iap_wizard_page *page;
 
   if (!page_name)
     page_name = iap_wizard_get_current_page(iw);
 
-  wizzard_page =
-      (struct iap_wizard_page *)g_hash_table_lookup(iw->pages, page_name);
+  page = (struct iap_wizard_page *)g_hash_table_lookup(iw->pages, page_name);
 
-  if (wizzard_page)
+  if (page)
   {
-    if (wizzard_page->get_page)
-      return wizzard_page->get_page(wizzard_page->priv, current);
+    if (page->get_page)
+      return page->get_page(page->priv, current);
     else
-      return wizzard_page->next_page;
+      return page->next_page;
   }
   else
     ULOG_ERR("IAP Wizard page %s not found!", page_name);
@@ -171,7 +153,7 @@ iap_wizard_validate_finish_button(struct iap_wizard *iw)
     {
       const gchar *name_text = gtk_entry_get_text(
             GTK_ENTRY(GTK_WIDGET(g_hash_table_lookup(iw->widgets, "NAME"))));
-      gchar *page_name = iap_wizard_get_current_page(iw);
+      const gchar *page_name = iap_wizard_get_current_page(iw);
 
       if (!page_name)
         page_name = "WELCOME";
@@ -197,6 +179,49 @@ iap_wizard_validate_finish_button(struct iap_wizard *iw)
 
     gtk_dialog_set_response_sensitive(GTK_DIALOG(iw->dialog), 0, sensitive);
   }
+}
+
+static void
+iap_wizard_init_stage_widgets(struct iap_wizard *iw,
+                              struct stage_widget *widgets)
+{
+  int stage_widgets_count = 0;
+  int widgets_count = 0;
+  int i;
+  struct stage_widget *w;
+
+  if (iw->stage_widgets)
+  {
+    w = iw->stage_widgets;
+
+    while (w->name)
+    {
+      stage_widgets_count++;
+      w++;
+    }
+  }
+
+  if (widgets)
+  {
+    w = widgets;
+
+    while(w->name)
+    {
+      widgets_count++;
+      w++;
+    }
+  }
+
+  iw->stage_widgets = (struct stage_widget *)g_realloc_n(
+        iw->stage_widgets, widgets_count + stage_widgets_count + 1,
+        sizeof(struct stage_widget));
+
+  w = &iw->stage_widgets[stage_widgets_count];
+
+  for (i = 0; i < widgets_count; i++)
+    memcpy(w++, widgets++, sizeof(*w));
+
+  w->name = NULL;
 }
 
 static void
@@ -250,7 +275,7 @@ iap_wizard_load_plugins(struct iap_wizard *iw)
     struct iap_wizard_page *page;
 
     iap_wizard_init_stage_widgets(iw, plugin->stage_widgets);
-    page = (struct iap_wizard_page *)plugin->pages;
+    page = plugin->pages;
 
     while (page->id)
     {
@@ -972,9 +997,66 @@ iap_wizard_save_state(struct iap_wizard *iw, GByteArray *state)
 
   g_byte_array_append(state, (guint8 *)&iw->page, sizeof(iw->page));
 
-  len = iw->advanced != 0;
+  len = iw->advanced != 0 ? 1 : 0;
   g_byte_array_append(state, &len, sizeof(len));
 
-  if ( len )
-    iap_advanced_save_state((int)iw->advanced, state);
+  if (len)
+    iap_advanced_save_state(iw->advanced, state);
+}
+
+static void
+iap_wizard_import_widgets(struct iap_wizard *sw)
+{
+  sw->import_mode = 1;
+  mapper_import_widgets(sw->stage, sw->stage_widgets,
+                        (mapper_get_widget_fn)iap_wizard_get_widget, sw);
+  sw->import_mode = 0;
+  iap_wizard_validate_finish_button(sw);
+}
+
+void
+iap_wizard_import(struct iap_wizard *iw, struct stage *s)
+{
+  GSList *l;
+  gchar *name;
+
+  iw->import_mode = 1;
+
+  if (s)
+  {
+    iap_wizard_set_active_stage(iw, s);
+    iw->page.in_progress = FALSE;
+    iw->iap_id = g_strdup(s->name);
+  }
+
+  for (l = iw->plugins; l; l = l->next)
+  {
+    struct iap_wizard_plugin *plugin = l->data;
+
+    if (plugin && plugin->get_page && plugin->get_page(plugin->priv, -1, FALSE))
+    {
+      iw->plugin = plugin;
+      break;
+    }
+  }
+
+  iap_wizard_import_widgets(iw);
+
+  if (iw->plugin && iw->plugin->advanced_show)
+    iw->plugin->advanced_show(iw->plugin->priv, s);
+
+  iw->import_mode = 1;
+  name = stage_get_string(iw->stage, "name");
+
+  if ((!name || !*name) && s && s->name&& *s->name)
+  {
+    gpointer widget = g_hash_table_lookup(iw->widgets, "NAME");
+    gchar *stage_name = iap_settings_get_name(s->name);
+
+    gtk_entry_set_text(GTK_ENTRY(GTK_WIDGET(widget)), stage_name);
+    g_free(stage_name);
+  }
+
+  g_free(name);
+  iw->import_mode = 0;
 }

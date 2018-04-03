@@ -4,6 +4,23 @@
 struct iap_wizard;
 struct iap_wizard_page;
 
+struct iap_wizard_plugin
+{
+  const gchar *name;
+  guint prio;
+  struct iap_wizard_page *pages;
+  GHashTable *widgets;
+  struct stage_widget *stage_widgets;
+  gpointer priv;
+  const gchar **(*get_widgets)(gpointer priv);
+  const char *(*get_page)(gpointer priv, int index, gboolean show_note);
+  struct iap_advanced_page *(*get_advanced)(gpointer priv);
+  void (*save_state)(gpointer priv, GByteArray *state);
+  int restore;
+  void (*advanced_show)(gpointer priv, struct stage *s);
+  void (*advanced_done)(gpointer priv);
+};
+
 GtkWidget *iap_wizard_get_dialog(struct iap_wizard *iw);
 struct stage *iap_wizard_get_active_stage(struct iap_wizard *iw);
 gchar *iap_wizard_get_current_page(struct iap_wizard *iw);
@@ -24,5 +41,6 @@ void iap_wizard_save_state(struct iap_wizard *iw, GByteArray *state);
 struct iap_wizard *iap_wizard_create(gpointer user_data, GtkWindow *parent);
 void iap_wizard_show(struct iap_wizard *iw);
 void iap_wizard_destroy(struct iap_wizard *iw);
+void iap_wizard_import(struct iap_wizard *iw, struct stage *s);
 
 #endif // WIZARD_H
