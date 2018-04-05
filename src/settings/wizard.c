@@ -1184,3 +1184,76 @@ iap_wizard_import(struct iap_wizard *iw, struct stage *s)
   g_free(name);
   iw->import_mode = 0;
 }
+
+static const struct
+{
+  const char *key;
+  const char *id;
+} stage_defaults[] =
+{
+  {"ipv4_type", "AUTO"},
+  {"ipv4_address", "0.0.0.0"},
+  {"ipv4_netmask", "0.0.0.0"},
+  {"ipv4_gateway", "0.0.0.0"},
+  {"ipv4_autodns", GINT_TO_POINTER(-1)},
+  {"ipv4_dns1", "0.0.0.0"},
+  {"ipv4_dns2", "0.0.0.0"},
+  {"proxytype", "NONE"}
+};
+
+
+void
+iap_wizard_set_active_stage(struct iap_wizard *iw, struct stage *new_stage)
+{
+  struct stage *s = iw->stage;
+  gpointer widget;
+  const gchar *name;
+
+  if (s == new_stage)
+    return;
+
+  iw->import_mode = 1;
+
+  if ( s && !s->gconf )
+    iap_wizzard_export_widgets(iw);
+
+  widget = g_hash_table_lookup(iw->widgets, "NAME");
+
+  name = gtk_entry_get_text(GTK_ENTRY(GTK_WIDGET(widget)));
+
+  iw->stage = new_stage;
+
+  if (new_stage)
+  {
+    int i;
+
+    for (i = 0; i < G_N_ELEMENTS(stage_defaults); i++)
+    {
+      const char *key = stage_defaults[i].key;
+      GConfValue *val = stage_get_val(new_stage, stage_defaults[i].key);
+
+      if (!val)
+      {
+        const char *id = stage_defaults[i].id;
+
+        if (id == GINT_TO_POINTER(-2))
+          stage_set_bool(iw->stage, key, 0);
+        else if (id == GINT_TO_POINTER(-1))
+          stage_set_bool(iw->stage, key, TRUE);
+        else if (GPOINTER_TO_INT(id) > 255)
+          stage_set_string(iw->stage, key, id);
+        else
+          stage_set_int(iw->stage, key, GPOINTER_TO_INT(id));
+      }
+      else
+        gconf_value_free(val);
+    }
+  }
+
+  ULOG_DEBUG("Wizard stage changed: %s(%p)", new_stage->name, new_stage);
+
+  if (name && *name)
+    stage_set_string(iw->stage, "name", name);
+
+  iap_wizard_import_widgets(iw);
+}

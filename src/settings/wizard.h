@@ -51,6 +51,7 @@ struct iap_wizard
 
 GtkWidget *iap_wizard_get_dialog(struct iap_wizard *iw);
 struct stage *iap_wizard_get_active_stage(struct iap_wizard *iw);
+void iap_wizard_set_active_stage(struct iap_wizard *iw, struct stage *new_stage);
 gchar *iap_wizard_get_current_page(struct iap_wizard *iw);
 gchar *iap_wizard_get_iap_id(struct iap_wizard *iw);
 void iap_wizard_select_plugin_label(struct iap_wizard *iw, gchar *name, guint idx);
