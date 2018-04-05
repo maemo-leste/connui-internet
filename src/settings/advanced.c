@@ -4,6 +4,7 @@
 #include <libintl.h>
 
 #include "advanced.h"
+#include "wizard.h"
 
 void
 iap_advanced_show(struct iap_wizard_advanced *adv)

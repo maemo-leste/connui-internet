@@ -21,6 +21,34 @@ struct iap_wizard_plugin
   void (*advanced_done)(gpointer priv);
 };
 
+struct iap_wizard
+{
+  gpointer user_data;
+  GtkWidget *dialog;
+  GtkWidget *button_next;
+  GtkWidget *button_finish;
+  GtkWindow *parent;
+  guint response_id;
+  GtkNotebook *notebook;
+  gchar **page_ids;
+  GHashTable *widgets;
+  GHashTable *pages;
+  GSList *plugins;
+  GSList *plugin_modules;
+  struct stage_widget *stage_widgets;
+  struct stage *stage;
+  struct iap_wizard_plugin *plugin;
+  struct iap_wizard_advanced *advanced;
+  int import_mode;
+  int unk2;
+  gchar *iap_id;
+  struct {
+    int current;
+    int index[8];
+    gboolean in_progress;
+  } page;
+};
+
 GtkWidget *iap_wizard_get_dialog(struct iap_wizard *iw);
 struct stage *iap_wizard_get_active_stage(struct iap_wizard *iw);
 gchar *iap_wizard_get_current_page(struct iap_wizard *iw);

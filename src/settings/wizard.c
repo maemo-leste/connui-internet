@@ -20,40 +20,12 @@ enum wizzard_button
   WIZARD_BUTTON_ADVANCED = 4
 };
 
-struct iap_wizard
-{
-  gpointer user_data;
-  GtkWidget *dialog;
-  GtkWidget *button_next;
-  GtkWidget *button_finish;
-  GtkWindow *parent;
-  guint response_id;
-  GtkNotebook *notebook;
-  gchar **page_ids;
-  GHashTable *widgets;
-  GHashTable *pages;
-  GSList *plugins;
-  GSList *plugin_modules;
-  struct stage_widget *stage_widgets;
-  struct stage *stage;
-  struct iap_wizard_plugin *plugin;
-  struct iap_wizard_advanced *advanced;
-  int import_mode;
-  int unk2;
-  gchar *iap_id;
-  struct {
-    int current;
-    int index[8];
-    gboolean in_progress;
-  } page;
-};
-
 struct iap_wizard_page
 {
   gchar *id;
   gchar *msgid;
   GtkWidget * (*create)(struct iap_wizard *iw);
-  const char * (*get_page)(struct iap_wizard *iw, guint current);
+  const char * (*get_page)(struct iap_wizard *iw, gboolean show_note);
   void (*finish)(struct iap_wizard *iw);
   void (*prev)(struct iap_wizard *iw);
   gchar *next_page;
@@ -115,8 +87,8 @@ iap_wizard_set_completed(struct iap_wizard *iw, gboolean completed)
 }
 
 static const char *
-iap_wizard_get_next_page(struct iap_wizard *iw, const void *page_name,
-                         guint current)
+iap_wizard_get_next_page(struct iap_wizard *iw, const char *page_name,
+                         gboolean show_note)
 {
   struct iap_wizard_page *page;
 
@@ -128,12 +100,12 @@ iap_wizard_get_next_page(struct iap_wizard *iw, const void *page_name,
   if (page)
   {
     if (page->get_page)
-      return page->get_page(page->priv, current);
+      return page->get_page(page->priv, show_note);
     else
       return page->next_page;
   }
   else
-    ULOG_ERR("IAP Wizard page %s not found!", page_name);
+    DLOG_ERR("IAP Wizard page %s not found!", page_name);
 
   return NULL;
 }
@@ -167,7 +139,7 @@ iap_wizard_validate_finish_button(struct iap_wizard *iw)
 
       while (!g_str_has_suffix(page_name, "COMPLETE"))
       {
-        page_name = iap_wizard_get_next_page(iw, page_name, 0);
+        page_name = iap_wizard_get_next_page(iw, page_name, FALSE);
 
         if (!page_name)
           break;
@@ -243,7 +215,7 @@ iap_wizard_load_plugins(struct iap_wizard *iw)
         g_module_build_path("/usr/lib/iapsettings", module_name);
     GModule *module = g_module_open(module_path, G_MODULE_BIND_LOCAL);
 
-    ULOG_INFO("Opening module %s: %p", module_path, module);
+    DLOG_INFO("Opening module %s: %p", module_path, module);
 
     if (module &&
         g_module_symbol(module, "iap_wizard_plugin_init",
@@ -253,18 +225,18 @@ iap_wizard_load_plugins(struct iap_wizard *iw)
 
       if (plugin && plugin_init(iw, plugin))
       {
-        ULOG_INFO("Using IAP settings module %s", module_name);
+        DLOG_INFO("Using IAP settings module %s", module_name);
         iw->plugin_modules = g_slist_append(iw->plugin_modules, module);
         iw->plugins = g_slist_append(iw->plugins, plugin);
       }
       else
       {
         g_module_close(module);
-        ULOG_ERR("Unable to initialize module %s", module_name);
+        DLOG_ERR("Unable to initialize module %s", module_name);
       }
     }
     else
-      ULOG_ERR("Unable to use module %s: %s", module_name, g_module_error());
+      DLOG_ERR("Unable to use module %s: %s", module_name, g_module_error());
 
     g_free(module_path);
   }
@@ -492,6 +464,111 @@ iap_wizard_name_and_type_page_create(struct iap_wizard *iw)
   return vbox;
 }
 
+static GtkWidget *
+iap_wizard_find_plugin_widget(struct iap_wizard *iw,
+                              struct iap_wizard_plugin *plugin, int idx)
+{
+  gchar *id = g_strdup_printf("%s%d", plugin->name, idx);
+  GtkWidget *widget;
+
+  widget = GTK_WIDGET(g_hash_table_lookup(iw->widgets, id));
+
+  g_free(id);
+
+  return widget;
+}
+
+static struct iap_wizard_plugin *
+iap_wizard_find_plugin(struct iap_wizard *iw, int *idx)
+{
+  GSList *l;
+
+
+  for (l = iw->plugins; l; l = l->next)
+  {
+    struct iap_wizard_plugin *plugin = l->data;
+
+    if (plugin && plugin->get_widgets)
+    {
+      const gchar **widgets = plugin->get_widgets(plugin->priv);
+
+      if (widgets && *widgets)
+      {
+        int i = 0;
+
+        while (widgets[i])
+        {
+          GtkWidget *button = iap_wizard_find_plugin_widget(iw, plugin, i);
+
+          if (button && gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button)))
+          {
+            if (idx)
+              *idx = i;
+
+            return plugin;
+          }
+
+          i++;
+        }
+      }
+    }
+  }
+
+  return NULL;
+}
+
+const char *
+iap_wizard_name_and_type_page_next(struct iap_wizard *iw, gboolean show_note)
+{
+  GtkWidget *widget;
+  const gchar *iap_name;
+  gchar *type = NULL;
+  const char *page = NULL;
+  int idx = 0;
+
+  widget = iap_wizard_get_widget(iw, "NAME");
+  iap_name = gtk_entry_get_text(GTK_ENTRY(widget));
+
+  if (iw->stage)
+    type = stage_get_string(iw->stage, "type");
+
+  if ((type && !strcmp(type, "GPRS")) || !iap_name || !*iap_name ||
+      !iap_settings_iap_exists(iap_name, iw->iap_id))
+  {
+    struct iap_wizard_plugin *plugin;
+
+    g_free(type);
+    plugin = iap_wizard_find_plugin(iw, &idx);
+    iw->plugin = plugin;
+
+    if (plugin)
+    {
+      if (plugin->get_page)
+      {
+        page = plugin->get_page(plugin->priv, idx, show_note);
+      }
+      else
+        DLOG_INFO("Plugin does not handle this type");
+    }
+    else
+      DLOG_INFO("No plugin found to handle type");
+
+    return page;
+  }
+
+  if (show_note)
+  {
+    hildon_banner_show_information(
+          GTK_WIDGET(iw->dialog), NULL,
+          dgettext("osso-connectivity-ui", "conn_ib_conn_name_in_use"));
+    gtk_widget_grab_focus(widget);
+  }
+
+  g_free(type);
+
+  return NULL;
+}
+
 static struct iap_wizard_page iap_wizard_pages[] =
 {
   {"WELCOME",
@@ -591,7 +668,7 @@ iap_wizzard_notebook_switch_page_cb(GtkNotebook *notebook, gpointer arg1,
         page->finish(page->priv);
     }
     else
-      ULOG_ERR("Unable to find page %s!", id);
+      DLOG_ERR("Unable to find page %s!", id);
   }
 }
 
@@ -600,6 +677,67 @@ iap_wizzard_export_widgets(struct iap_wizard *iw)
 {
   mapper_export_widgets(iw->stage, iw->stage_widgets,
                         (mapper_get_widget_fn)iap_wizard_get_widget, iw);
+}
+
+static void
+iap_wizard_dialog_advanced_settings_response_cb(GtkDialog *dialog,
+                                                gint response_id,
+                                                gpointer user_data)
+{
+  struct iap_wizard *iw = (struct iap_wizard *)user_data;
+
+  if (response_id == GTK_RESPONSE_OK)
+  {
+    struct iap_wizard_plugin *plugin = iw->plugin;
+
+    if (plugin && plugin->advanced_done)
+      plugin->advanced_done(plugin->priv);
+
+    iap_advanced_export(iw->advanced, iw->stage);
+  }
+
+  iap_advanced_destroy(iw->advanced);
+  iw->advanced = NULL;
+}
+
+static void
+iap_wizard_dialog_activate_advanced_settings(struct iap_wizard *iw)
+{
+  struct iap_wizard_plugin *plugin;
+  struct iap_advanced_page *pages = NULL;
+
+  if (!(plugin = iw->plugin))
+  {
+    DLOG_ERR("Unable to activate advanced setings while there is no active plugin");
+    return;
+  }
+
+  if (plugin->get_advanced)
+  {
+    struct iap_advanced_page *page;
+
+    page = pages = plugin->get_advanced(plugin->priv);
+
+    while (page->msgid)
+    {
+      pages->priv = plugin->priv;
+      page++;
+    }
+  }
+
+  iw->advanced = iap_advanced_create(iw->user_data,
+                                     GTK_WINDOW(iw->dialog),
+                                     pages, iw->stage_widgets, iw->stage);
+
+  iap_advanced_import(iw->advanced, iw->stage);
+
+  if (plugin->advanced_show)
+    plugin->advanced_show(plugin->priv, iw->stage);
+
+  g_signal_connect(G_OBJECT(iw->advanced->dialog), "response",
+                   G_CALLBACK(iap_wizard_dialog_advanced_settings_response_cb),
+                   iw);
+  iap_advanced_show(iw->advanced);
 }
 
 static void
@@ -614,7 +752,7 @@ iap_wizard_dialog_response_cb(GtkDialog *dialog, gint response_id,
 
   if (!page)
   {
-    ULOG_ERR("Unable to find current page %s!", id);
+    DLOG_ERR("Unable to find current page %s!", id);
     return;
   }
 
@@ -630,16 +768,16 @@ iap_wizard_dialog_response_cb(GtkDialog *dialog, gint response_id,
   switch (response_id)
   {
     case WIZARD_BUTTON_FINISH:
-      iap_wizard_get_next_page(iw, NULL, 0);
+      iap_wizard_get_next_page(iw, NULL, FALSE);
       break;
     case WIZARD_BUTTON_PREVIOUS:
-      iap_wizard_get_next_page(iw, NULL, 0);
+      iap_wizard_get_next_page(iw, NULL, FALSE);
       iw->page.current--;
       gtk_notebook_set_current_page(iw->notebook,
                                     iw->page.index[iw->page.current]);
       break;
     case WIZARD_BUTTON_NEXT:
-      next_page = iap_wizard_get_next_page(iw, id, 1);
+      next_page = iap_wizard_get_next_page(iw, id, TRUE);
 
       if (next_page)
       {
@@ -899,7 +1037,7 @@ iap_wizard_set_current_page(struct iap_wizard *iw, const gchar *id)
     return TRUE;
   }
 
-  ULOG_ERR("Unable to find page %s!", id);
+  DLOG_ERR("Unable to find page %s!", id);
 
   return FALSE;
 }
@@ -940,20 +1078,6 @@ iap_wizard_export(struct iap_wizard *iw, struct stage *s, gboolean reconnect)
     msg = dgettext("osso-connectivity-ui", "conn_ib_settings_saved");
 
   return hildon_banner_show_information(GTK_WIDGET(iw->parent), 0, msg);
-}
-
-static GtkWidget *
-iap_wizard_find_plugin_widget(struct iap_wizard *iw,
-                              struct iap_wizard_plugin *plugin, int idx)
-{
-  gchar *id = g_strdup_printf("%s%d", plugin->name, idx);
-  GtkWidget *widget;
-
-  widget = GTK_WIDGET(g_hash_table_lookup(iw->widgets, id));
-
-  g_free(id);
-
-  return widget;
 }
 
 void

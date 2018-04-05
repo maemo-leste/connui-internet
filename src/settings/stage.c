@@ -167,8 +167,8 @@ stage_iap_path_rename(struct stage *s, const gchar *new_name)
   s->dir = g_strconcat(ICD_GCONF_PATH, "/", escaped, "/", NULL);
   g_free(escaped);
 
-  ULOG_INFO("%s(): Renaming GConf entry '%s' to '%s'", __FUNCTION__,
-            dir, s->dir);
+  DLOG_DEBUG("%s(): Renaming GConf entry '%s' to '%s'", __FUNCTION__,
+             dir, s->dir);
 
   entries = gconf_client_all_entries(s->gconf, dir, &error);
 
