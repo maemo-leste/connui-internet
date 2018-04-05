@@ -3,6 +3,7 @@
 #include <connui/connui.h>
 #include <connui/wlan-common.h>
 #include <connui/connui-log.h>
+#include <connui/connui-dbus.h>
 #include <wlancond.h>
 
 #include <ctype.h>
@@ -28,6 +29,16 @@ struct easy_wlan
   struct stage stage;
   gint min_width;
 };
+
+struct wlancond_info
+{
+  const gchar *ssid;
+  guint cap_bits;
+  gboolean scan_results_received;
+  gboolean ssid_found;
+  guint wlancond_timeout_id;
+};
+
 
 static GtkWidget *
 iap_easy_wlan_get_widget(gpointer user_data, const gchar *id)
@@ -764,4 +775,189 @@ iap_run_easy_wlan_dialogs(osso_context_t *libosso, GtkWindow *parent,
   g_free(ewlan.iap_id);
 
   return NULL;
+}
+
+static void
+iap_hidden_ssid_dialog_entry_activate_cb(GtkEntry *entry, gpointer user_data)
+{
+  if (user_data)
+    gtk_dialog_response(GTK_DIALOG(user_data), GTK_RESPONSE_OK);
+}
+
+static guint
+get_wlan_tx_power()
+{
+  guint power;
+  GConfClient *gconf = gconf_client_get_default();
+  GError *err = NULL;
+
+  if (gconf)
+  {
+    power = gconf_client_get_int(gconf, ICD_GCONF_PATH"/wlan_tx_power", &err);
+
+    if (err)
+    {
+      CONNUI_ERR("Error reading TX power: %s", err->message);
+      g_clear_error(&err);
+    }
+
+    g_object_unref(G_OBJECT(gconf));
+
+    if (power > 0)
+      return power;
+  }
+  else
+    CONNUI_ERR("Unable to get GConfClient for reading TX power");
+
+  return 8;
+}
+
+static gboolean
+wlancond_timeout_cb(gpointer user_data)
+{
+  ((struct wlancond_info *)user_data)->wlancond_timeout_id = 0;
+
+  return FALSE;
+}
+
+static gboolean
+get_capability_for_ssid(const gchar *ssid, guint *capability)
+{
+  struct wlancond_info info;
+  dbus_int32_t tx_power;
+  gulong timeout = 500000;
+  DBusMessage *mcall;
+  DBusMessage *reply;
+
+  g_return_val_if_fail(capability != NULL, FALSE);
+
+  info.ssid = ssid;
+  info.cap_bits = 0;
+  info.scan_results_received = FALSE;
+  info.ssid_found = FALSE;
+
+  if (!connui_dbus_connect_system_path("/com/nokia/wlancond/signal",
+                                       wlancond_signal, &info))
+  {
+    CONNUI_ERR("Unable to register system bus signal/method call path");
+    return FALSE;
+  }
+
+  tx_power = get_wlan_tx_power();
+
+  while (1)
+  {
+    mcall = dbus_message_new_method_call("com.nokia.wlancond",
+                                         "/com/nokia/wlancond/request",
+                                         "com.nokia.wlancond.request",
+                                         "scan");
+    if (!mcall ||
+        !dbus_message_append_args(mcall,
+                                  DBUS_TYPE_INT32, &tx_power,
+                                  DBUS_TYPE_ARRAY, DBUS_TYPE_BYTE,
+                                  &ssid, strlen(ssid) + 1,
+                                  DBUS_TYPE_INVALID))
+    {
+      DLOG_ERR("Unable to send wlancond scan request!");
+    }
+    else
+    {
+      reply = connui_dbus_recv_reply_system_mcall(mcall);
+
+      if (reply)
+      {
+        if (dbus_message_get_type(reply) == DBUS_MESSAGE_TYPE_ERROR)
+        {
+          DLOG_ERR("wlancond replied with error %s",
+                   dbus_message_get_error_name(reply));
+          dbus_message_unref(reply);
+        }
+        else
+          break;
+      }
+      else
+        DLOG_ERR("Unable to receive reply from wlancond!");
+    }
+
+    g_usleep(timeout);
+
+    if (mcall)
+      dbus_message_unref(mcall);
+
+    timeout += 500000;
+
+    if (timeout == 3000000)
+      goto out;
+  }
+
+  dbus_message_unref(reply);
+  dbus_message_unref(mcall);
+
+  info.wlancond_timeout_id = g_timeout_add(10000, wlancond_timeout_cb, &info);
+
+  while (!info.scan_results_received && info.wlancond_timeout_id)
+    g_main_context_iteration(NULL, TRUE);
+
+  if (info.wlancond_timeout_id)
+  {
+    g_source_remove(info.wlancond_timeout_id);
+    info.wlancond_timeout_id = 0;
+    *capability = info.cap_bits;
+  }
+  else
+    DLOG_ERR("Unable to receive scan results from wlancond!");
+
+out:
+  connui_dbus_disconnect_system_path("/com/nokia/wlancond/signal");
+
+  return info.ssid_found;
+}
+
+gboolean
+iap_hidden_ssid_dialog(GtkWindow *parent, gchar **ssid, guint *wlan_capability)
+{
+  GtkWidget *dialog;
+  GtkWidget *entry;
+  int im;
+  GtkWidget *label;
+  GtkWidget *hbox;
+
+  g_return_val_if_fail(ssid != NULL && wlan_capability != NULL, FALSE);
+
+  dialog = hildon_dialog_new_with_buttons(
+        _("conn_set_iap_ti_wlan_hidden"),
+        parent,
+        GTK_DIALOG_NO_SEPARATOR | GTK_DIALOG_DESTROY_WITH_PARENT |
+        GTK_DIALOG_MODAL,
+        dgettext("hildon-libs", "wdgt_bd_done"),
+        GTK_RESPONSE_OK,
+        NULL);
+
+  entry = iap_widgets_create_h22_entry();
+  im = hildon_gtk_entry_get_input_mode(GTK_ENTRY(entry));
+  im &= ~HILDON_GTK_INPUT_MODE_AUTOCAP;
+  hildon_gtk_entry_set_input_mode(GTK_ENTRY(entry), im);
+
+  label = gtk_label_new(_("conn_set_iap_fi_wlan_hidden_ssid"));
+  hbox = gtk_hbox_new(0, 8);
+  gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
+  gtk_box_pack_start(GTK_BOX(hbox), entry, TRUE, TRUE, 0);
+  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), hbox, FALSE, FALSE, 0);
+
+  g_signal_connect(G_OBJECT(entry), "activate",
+                   G_CALLBACK(iap_hidden_ssid_dialog_entry_activate_cb),
+                   dialog);
+  iap_common_set_close_response(dialog, GTK_RESPONSE_CANCEL);
+  gtk_widget_show_all(dialog);
+
+  if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_CANCEL)
+  {
+    gtk_widget_destroy(dialog);
+    return FALSE;
+  }
+
+  *ssid = g_strdup(iap_widgets_h22_entry_get_text(entry));
+  gtk_widget_destroy(dialog);
+
+  return get_capability_for_ssid(*ssid, wlan_capability);
 }
