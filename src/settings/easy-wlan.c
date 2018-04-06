@@ -4,7 +4,8 @@
 #include <connui/wlan-common.h>
 #include <connui/connui-log.h>
 #include <connui/connui-dbus.h>
-#include <wlancond.h>
+#include <connui/wlancond.h>
+#include <connui/wlancond-dbus.h>
 
 #include <ctype.h>
 #include <string.h>
@@ -793,7 +794,7 @@ get_wlan_tx_power()
 
   if (gconf)
   {
-    power = gconf_client_get_int(gconf, ICD_GCONF_PATH"/wlan_tx_power", &err);
+    power = gconf_client_get_int(gconf, ICD_GCONF_PATH "/wlan_tx_power", &err);
 
     if (err)
     {
@@ -810,6 +811,97 @@ get_wlan_tx_power()
     CONNUI_ERR("Unable to get GConfClient for reading TX power");
 
   return 8;
+}
+
+static gboolean
+iter_get_bytearray_val(DBusMessageIter *iter, int *value_len, void *value)
+{
+  DBusMessageIter sub;
+
+  if (dbus_message_iter_get_arg_type(iter) != DBUS_TYPE_ARRAY ||
+      dbus_message_iter_get_element_type(iter) != DBUS_TYPE_BYTE)
+  {
+    return FALSE;
+  }
+
+  dbus_message_iter_recurse(iter, &sub);
+  dbus_message_iter_get_fixed_array(&sub, value, value_len);
+  dbus_message_iter_next(iter);
+
+  return TRUE;
+}
+
+static gboolean
+iter_get_val(DBusMessageIter *iter, int arg_type, void *value)
+{
+  if (dbus_message_iter_get_arg_type(iter) != arg_type)
+    return FALSE;
+
+  dbus_message_iter_get_basic(iter, value);
+  dbus_message_iter_next(iter);
+
+  return TRUE;
+}
+
+static DBusHandlerResult
+wlancond_signal(DBusConnection *connection, DBusMessage *message,
+                void *user_data)
+{
+  struct wlancond_info *info = (struct wlancond_info *)user_data;
+  DBusMessageIter iter;
+  dbus_int32_t number_of_results;
+
+  g_return_val_if_fail(info != NULL, DBUS_HANDLER_RESULT_NOT_YET_HANDLED);
+
+  if (!dbus_message_is_signal(message, WLANCOND_SIG_INTERFACE,
+                              WLANCOND_SCAN_RESULTS_SIG))
+  {
+    return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+  }
+
+  info->scan_results_received = TRUE;
+  dbus_message_iter_init(message, &iter);
+
+  if (!iter_get_val(&iter, DBUS_TYPE_INT32, &number_of_results))
+    return DBUS_HANDLER_RESULT_HANDLED;
+
+  if (number_of_results > 0)
+  {
+    int i;
+    dbus_uint32_t cap_bits;
+    dbus_uint32_t channel;
+    dbus_int32_t rssi;
+    int ssid_len;
+    int bssid_len;
+    gchar *bssid;
+    gchar *ssid;
+
+    for (i = 0; i < number_of_results; i++)
+    {
+      if (!iter_get_bytearray_val(&iter, &ssid_len, &ssid) ||
+          !iter_get_bytearray_val(&iter, &bssid_len, &bssid) ||
+          !iter_get_val(&iter, DBUS_TYPE_INT32, &rssi) ||
+          !iter_get_val(&iter, DBUS_TYPE_UINT32, &channel) ||
+          !iter_get_val(&iter, DBUS_TYPE_UINT32, &cap_bits))
+      {
+        return DBUS_HANDLER_RESULT_HANDLED;
+      }
+
+      if (ssid && info->ssid && !strcmp(ssid, info->ssid))
+      {
+        info->ssid_found = TRUE;
+        info->cap_bits = cap_bits;
+        break;
+      }
+    }
+  }
+
+  if (info->ssid_found)
+    return DBUS_HANDLER_RESULT_HANDLED;
+
+  DLOG_ERR("Unable to find the given SSID: %s", info->ssid);
+
+  return DBUS_HANDLER_RESULT_HANDLED;
 }
 
 static gboolean
@@ -836,7 +928,7 @@ get_capability_for_ssid(const gchar *ssid, guint *capability)
   info.scan_results_received = FALSE;
   info.ssid_found = FALSE;
 
-  if (!connui_dbus_connect_system_path("/com/nokia/wlancond/signal",
+  if (!connui_dbus_connect_system_path(WLANCOND_SIG_PATH,
                                        wlancond_signal, &info))
   {
     CONNUI_ERR("Unable to register system bus signal/method call path");
@@ -847,10 +939,10 @@ get_capability_for_ssid(const gchar *ssid, guint *capability)
 
   while (1)
   {
-    mcall = dbus_message_new_method_call("com.nokia.wlancond",
-                                         "/com/nokia/wlancond/request",
-                                         "com.nokia.wlancond.request",
-                                         "scan");
+    mcall = dbus_message_new_method_call(WLANCOND_SERVICE,
+                                         WLANCOND_REQ_PATH,
+                                         WLANCOND_REQ_INTERFACE,
+                                         WLANCOND_SCAN_REQ);
     if (!mcall ||
         !dbus_message_append_args(mcall,
                                   DBUS_TYPE_INT32, &tx_power,
@@ -908,7 +1000,7 @@ get_capability_for_ssid(const gchar *ssid, guint *capability)
     DLOG_ERR("Unable to receive scan results from wlancond!");
 
 out:
-  connui_dbus_disconnect_system_path("/com/nokia/wlancond/signal");
+  connui_dbus_disconnect_system_path(WLANCOND_SIG_PATH);
 
   return info.ssid_found;
 }
