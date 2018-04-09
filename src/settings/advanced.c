@@ -507,6 +507,50 @@ static struct iap_advanced_page iap_advanced_pages[] =
   {FALSE, NULL, NULL, NULL, NULL, NULL}
 };
 
+static gboolean
+iap_advanced_address_key_press(GtkWidget *widget, GdkEventKey *event,
+                               gpointer user_data)
+{
+  gboolean rv = FALSE;
+  int i;
+  gint n_entries;
+  guint *keyvals = NULL;
+  GdkKeymapKey *keys = NULL;
+
+  if (!gdk_keymap_get_entries_for_keycode(gdk_keymap_get_default(),
+                                          event->hardware_keycode, &keys,
+                                          &keyvals, &n_entries))
+  {
+    return rv;
+  }
+
+  for (i = 0; i < n_entries; i++)
+  {
+    guint32 c = gdk_keyval_to_unicode(keyvals[i]);
+
+    if (g_unichar_isdigit(c))
+    {
+      GtkEditable *editable = GTK_EDITABLE(user_data);
+      gint position = gtk_editable_get_position(editable);
+      gchar *name = gdk_keyval_name(keyvals[i]);
+
+      gtk_editable_insert_text(editable, name, strlen(name), &position);
+      gtk_editable_set_position(editable, position + 1);
+      rv = TRUE;
+      break;
+    }
+  }
+
+
+  if (keys)
+    g_free(keys);
+
+  if (keyvals)
+    g_free(keyvals);
+
+  return rv;
+}
+
 struct iap_wizard_advanced *
 iap_advanced_create(gpointer user_data, GtkWindow *parent,
                     struct iap_advanced_page *pages, struct stage_widget *sw,
