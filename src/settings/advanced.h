@@ -5,7 +5,7 @@
 
 struct iap_advanced_widget
 {
-  gpointer user_data;
+  gboolean (*init)(struct stage *);
   gchar *id;
   gchar *proxy_id;
   gchar *auto_proxy_id;
@@ -16,7 +16,7 @@ struct iap_advanced_widget
 
 struct iap_advanced_page
 {
-  gboolean not_empty;
+  gboolean has_content;
   const gchar *msgid;
   struct iap_advanced_widget *widgets;
   void (*activate)(gpointer priv);

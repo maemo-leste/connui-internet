@@ -1,4 +1,5 @@
 #include <hildon/hildon.h>
+#include <connui/connui.h>
 
 #include <string.h>
 #include <libintl.h>
@@ -419,15 +420,21 @@ iap_advanced_restore_state(struct iap_wizard_advanced *adv,
   return rv;
 }
 
-static const char *advanced_toggles[] =
+static const char *advanced_ipv4_toggles[] =
 {
   "IPV4_AUTO", "IPV4_AUTO", "IPV4_AUTO", "IPV4_AUTO_DNS", "IPV4_AUTO_DNS",
   NULL
 };
 
-static const char *advanced_entries[] =
+static const char *advanced_ipv4_entries[] =
 {
   "IPV4_ADDRESS", "IPV4_NETMASK", "IPV4_GATEWAY", "IPV4_DNS1", "IPV4_DNS2",
+  NULL
+};
+
+static const char *advanced_ipv4_hosts[] =
+{
+  "IPV4_HTTP_HOST", "IPV4_HTTPS_HOST", "IPV4_FTP_HOST", "IPV4_RTSP_HOST",
   NULL
 };
 
@@ -444,10 +451,10 @@ iap_advanced_dialog_response_cb(GtkDialog *dialog, gint response_id,
   {
     int i = 0;
 
-    while(advanced_entries[i])
+    while(advanced_ipv4_entries[i])
     {
-      gpointer toggle = g_hash_table_lookup(adv->widgets, advanced_toggles[i]);
-      gpointer entry = g_hash_table_lookup(adv->widgets, advanced_entries[i]);
+      gpointer toggle = g_hash_table_lookup(adv->widgets, advanced_ipv4_toggles[i]);
+      gpointer entry = g_hash_table_lookup(adv->widgets, advanced_ipv4_entries[i]);
 
       if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(toggle)))
         gtk_entry_set_text(GTK_ENTRY(entry), "0.0.0.0");
@@ -477,4 +484,200 @@ iap_advanced_dialog_response_cb(GtkDialog *dialog, gint response_id,
       i++;
     }
   }
+}
+
+static struct iap_advanced_page iap_advanced_pages[] =
+{
+  {
+    TRUE,
+    "conn_set_iap_ti_adv_proxies",
+    iap_advanced_wizard_proxies_widgets,
+    NULL,
+    "Connectivity_Internetsettings_IAPsetupAdvancedproxies",
+    NULL
+  },
+  {
+    TRUE,
+    "conn_set_iap_ti_adv_ip",
+    iap_advanced_wizard_ip_widgets,
+    NULL,
+    "Connectivity_Internetsettings_IAPsetupAdvancedIPaddresses",
+    NULL
+  },
+  {FALSE, NULL, NULL, NULL, NULL, NULL}
+};
+
+struct iap_wizard_advanced *
+iap_advanced_create(gpointer user_data, GtkWindow *parent,
+                    struct iap_advanced_page *pages, struct stage_widget *sw,
+                    struct stage *s)
+{
+  int adv_page_cnt;
+  int plugin_page_cnt;
+  int i;
+  struct iap_advanced_page *page;
+  gpointer ipv4_auto;
+  GtkNotebook *notebook;
+  struct iap_wizard_advanced *adv = g_new0(struct iap_wizard_advanced, 1);
+  GtkDialogFlags flags = GTK_DIALOG_NO_SEPARATOR;
+
+  if (parent)
+    flags |= (GTK_DIALOG_DESTROY_WITH_PARENT | GTK_DIALOG_MODAL);
+
+  adv->user_data = user_data;
+  adv->stage = s;
+  adv->sw = sw;
+  adv->widgets = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+  adv->dialog = gtk_dialog_new_with_buttons(
+        dgettext("osso-connectivity-ui", "conn_set_iap_ti_adv"), parent, flags,
+        dgettext("hildon-libs", "wdgt_bd_save"), GTK_RESPONSE_OK,
+        NULL);
+
+  iap_common_set_close_response(adv->dialog, GTK_RESPONSE_CANCEL);
+  gtk_window_set_default_size(GTK_WINDOW(adv->dialog), 640, 270);
+
+  adv->notebook = GTK_NOTEBOOK(gtk_notebook_new());
+  gtk_notebook_set_show_tabs(notebook, TRUE);
+  gtk_notebook_set_show_border(notebook, FALSE);
+
+  for (adv_page_cnt = 0; iap_advanced_pages[adv_page_cnt].msgid;
+       adv_page_cnt++);
+
+  if (pages)
+  {
+    for (plugin_page_cnt = 0; pages[plugin_page_cnt].msgid;
+         plugin_page_cnt++);
+  }
+
+  adv->pages = g_new0(struct iap_advanced_page,
+                      adv_page_cnt +  plugin_page_cnt + 1);
+
+  for (i = 0; i < adv_page_cnt; i++)
+  {
+    memcpy(&adv->pages[i], &iap_advanced_pages[i],
+           sizeof(struct iap_advanced_page *));
+  }
+
+  if (pages)
+  {
+    for (i = 0; i < plugin_page_cnt; i++)
+    {
+      memcpy(&adv->pages[i + adv_page_cnt], &pages[i],
+             sizeof(struct iap_advanced_page *));
+    }
+  }
+
+  for (page = adv->pages; page->msgid; page++)
+  {
+    GtkWidget *note_page;
+
+    if (page->widgets)
+    {
+      GtkSizeGroup *size_group = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
+      struct iap_advanced_widget *widget = page->widgets;
+
+      note_page = gtk_vbox_new(0, 0);
+
+      while (widget->id)
+      {
+        if (!widget->init || widget->init(adv->stage))
+        {
+          GtkWidget *w = widget->create();
+          GtkWidget *caption;
+
+          g_hash_table_insert(adv->widgets, g_strdup(widget->id), w);
+
+          if (widget->is_toggle)
+          {
+            g_signal_connect(G_OBJECT(w), "toggled",
+                             G_CALLBACK(iap_advanced_widget_toggled_cb), adv);
+          }
+
+          caption = hildon_caption_new(
+                size_group, dgettext("osso-connectivity-ui", widget->msgid), w,
+                NULL, HILDON_CAPTION_OPTIONAL);
+          gtk_box_pack_start(GTK_BOX(note_page), caption, FALSE, FALSE, 0);
+        }
+
+        widget++;
+      }
+
+      g_object_unref(G_OBJECT(size_group));
+
+      if (page->has_content)
+      {
+        GtkAdjustment *adj;
+        GtkWidget *scrolled_window;
+        GtkWidget *viewport = gtk_viewport_new(NULL, NULL);
+
+        gtk_viewport_set_shadow_type(GTK_VIEWPORT(viewport), GTK_SHADOW_NONE);
+
+        gtk_container_add(GTK_CONTAINER(viewport), note_page);
+        scrolled_window = gtk_scrolled_window_new(NULL, NULL);
+
+        gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled_window),
+                                       GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
+
+        gtk_scrolled_window_set_shadow_type(
+              GTK_SCROLLED_WINDOW(scrolled_window), GTK_SHADOW_NONE);
+
+        adj = gtk_scrolled_window_get_vadjustment(
+              GTK_SCROLLED_WINDOW(scrolled_window));
+        gtk_container_set_focus_vadjustment(
+              GTK_CONTAINER(note_page), adj);
+        note_page = scrolled_window;
+
+        gtk_container_add(GTK_CONTAINER(scrolled_window), viewport);
+      }
+    }
+    else
+      note_page = gtk_label_new("Empty");
+
+    gtk_notebook_append_page(
+          notebook, note_page,
+          gtk_label_new(dgettext("osso-connectivity-ui", page->msgid)));
+  }
+
+  g_signal_connect(G_OBJECT(adv->dialog), "response",
+                   G_CALLBACK(iap_advanced_dialog_response_cb), adv);
+  g_signal_connect(G_OBJECT(adv->notebook), "switch-page",
+                   G_CALLBACK(iap_advanced_notebook_switch_page_cb), adv);
+
+  ipv4_auto = GTK_WIDGET(g_hash_table_lookup(adv->widgets, "IPV4_AUTO"));
+
+  if (ipv4_auto)
+  {
+    g_signal_connect(G_OBJECT(ipv4_auto), "toggled",
+                     G_CALLBACK(iap_advanced_ipv4_auto_toggled_cb), adv);
+  }
+
+  for (i = 0; advanced_ipv4_hosts[i]; i++)
+  {
+    GtkWidget *host =
+        GTK_WIDGET(g_hash_table_lookup(adv->widgets, advanced_ipv4_hosts[i]));
+
+    if (host)
+    {
+      g_signal_connect(G_OBJECT(host), "insert_text",
+                       G_CALLBACK(iap_advanced_host_insert_text_cb), NULL);
+      g_signal_connect(G_OBJECT(host), "changed",
+                       G_CALLBACK(iap_advanced_host_changed_cb), adv);
+    }
+  }
+
+  for (i = 0; advanced_ipv4_entries[i]; i++)
+  {
+    GtkWidget *entry =
+        GTK_WIDGET(g_hash_table_lookup(adv->widgets, advanced_ipv4_entries[i]));
+
+    if (entry)
+    {
+      g_signal_connect(G_OBJECT(entry), "insert_text",
+                       G_CALLBACK(iap_advanced_address_insert_text_cb), NULL);
+      g_signal_connect(G_OBJECT(entry), "key-press-event",
+                       G_CALLBACK(iap_advanced_address_key_press), entry);
+    }
+  }
+
+  return adv;
 }
