@@ -569,6 +569,86 @@ iap_wizard_name_and_type_page_next(struct iap_wizard *iw, gboolean show_note)
   return NULL;
 }
 
+static void
+iap_wizard_name_and_type_page_finish(struct iap_wizard *iw)
+{
+  GSList *l;
+  GSList *widget_list = NULL;
+  const gchar *type = NULL;
+  GSList *plugins;
+  gboolean has_active = FALSE;
+
+  plugins = g_slist_sort(g_slist_copy(iw->plugins),
+                         (GCompareFunc)iap_wizard_plugins_sort_cb);
+
+  if (plugins)
+  {
+    for (l = plugins; l; l = l->next)
+    {
+      const gchar **widgets;
+      struct iap_wizard_plugin *plugin = l->data;
+      GtkWidget *widget;
+      int idx = 0;
+
+      if (!plugin)
+        continue;
+
+      if (plugin->get_widgets &&
+          (widgets = plugin->get_widgets(plugin->priv)) && *widgets)
+      {
+        while (widgets[idx])
+        {
+          widget = iap_wizard_find_plugin_widget(iw, plugin, idx);
+          widget_list = g_slist_append(widget_list, widget);
+          gtk_widget_show_all(gtk_widget_get_parent(widget));
+          type = widgets[idx];
+          idx++;
+        }
+      }
+
+      while (idx < 10 &&
+             (widget = iap_wizard_find_plugin_widget(iw, plugin, idx++)))
+      {
+        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget), FALSE);
+        gtk_widget_hide_all(gtk_widget_get_parent(widget));
+      }
+    }
+
+    g_slist_free(plugins);
+
+    if (widget_list)
+    {
+      for (l = widget_list; l; l = l->next)
+      {
+        if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(l->data)))
+        {
+          has_active = TRUE;
+          break;
+        }
+      }
+
+      if (!has_active)
+      {
+        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget_list->data),
+                                     TRUE);
+      }
+
+      if (g_slist_length(widget_list) == 1)
+      {
+        gtk_label_set_text(
+              GTK_LABEL(GTK_WIDGET(g_hash_table_lookup(iw->widgets, "TYPE"))),
+              type);
+        gtk_widget_hide_all(
+              gtk_widget_get_parent(GTK_WIDGET(GTK_BUTTON(widget_list->data))));
+        return;
+      }
+    }
+  }
+
+  gtk_label_set_text(
+        GTK_LABEL(GTK_WIDGET(g_hash_table_lookup(iw->widgets, "TYPE"))), "");
+}
+
 static struct iap_wizard_page iap_wizard_pages[] =
 {
   {"WELCOME",
