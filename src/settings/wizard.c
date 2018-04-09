@@ -1337,3 +1337,110 @@ iap_wizard_set_active_stage(struct iap_wizard *iw, struct stage *new_stage)
 
   iap_wizard_import_widgets(iw);
 }
+
+gboolean
+iap_wizard_restore_state(struct iap_wizard *iw, struct stage_cache *data)
+{
+  GSList *l;
+  guint8 len;
+  int page_idx;
+
+  if (data->processed + sizeof(len) > data->len)
+    return 0;
+
+  len = data->data[data->processed];
+  data->processed += sizeof(len);
+
+  if (len)
+  {
+    const char *plugin_id;
+    if (data->processed + len > data->len)
+      return FALSE;
+
+    plugin_id = (const char *)&data->data[data->processed];
+
+    data->processed += len;
+
+    if (!plugin_id || data->processed + sizeof(page_idx) > data->len)
+      return FALSE;
+
+    memcpy(&page_idx, &data->data[data->processed], sizeof(page_idx));
+
+    data->processed += sizeof(page_idx);
+
+    for (l = iw->plugins; l; l = l->next)
+    {
+      struct iap_wizard_plugin *plugin = l->data;
+
+      if (!strcmp(plugin->name, plugin_id))
+      {
+        iw->plugin = plugin;
+        break;
+      }
+    }
+
+    if (!iw->plugin)
+    {
+      DLOG_ERR("Active plugin was not found, when restoring state!");
+      return FALSE;
+    }
+  }
+
+  for (l = iw->plugins; l; l = l->next)
+  {
+    struct iap_wizard_plugin *plugin = l->data;
+
+    if (plugin->restore)
+      plugin->restore(plugin->priv, data);
+  }
+
+  if (data->processed + sizeof(len) > data->len)
+    return FALSE;
+
+  len = data->data[data->processed];
+  data->processed += sizeof(len);
+
+  if (len)
+  {
+    const char *iap_id;
+
+    if (data->processed + len > data->len)
+      return FALSE;
+
+    iap_id = (const char *)&data->data[data->processed];
+    data->processed += len;
+
+    if (!iap_id)
+      return FALSE;
+
+    iw->iap_id = g_strdup(iap_id);
+  }
+
+  if (data->processed + sizeof(iw->page) > data->len)
+    return FALSE;
+
+  if (!&data->data[data->processed])
+    return FALSE;
+
+  memcpy(&iw->page, &data->data[data->processed], sizeof(iw->page));
+
+  data->processed += sizeof(iw->page);
+
+  iw->stage = NULL;
+
+  if (iw->plugin&& iw->plugin->get_page)
+    iw->plugin->get_page(iw->plugin->priv, page_idx, FALSE);
+
+  iap_wizard_import(iw, NULL);
+
+  if (data->processed + sizeof(len) > data->len)
+    return FALSE;
+
+  len = data->data[data->processed];
+  data->processed++;
+
+  if (len)
+    iap_wizard_dialog_activate_advanced_settings(iw);
+
+  return TRUE;
+}

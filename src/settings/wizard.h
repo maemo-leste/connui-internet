@@ -16,7 +16,7 @@ struct iap_wizard_plugin
   const char *(*get_page)(gpointer priv, int index, gboolean show_note);
   struct iap_advanced_page *(*get_advanced)(gpointer priv);
   void (*save_state)(gpointer priv, GByteArray *state);
-  int restore;
+  void (*restore)(gpointer priv, struct stage_cache *);
   void (*advanced_show)(gpointer priv, struct stage *s);
   void (*advanced_done)(gpointer priv);
 };
