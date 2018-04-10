@@ -234,6 +234,24 @@ static struct iap_advanced_widget iap_advanced_wizard_ip_widgets[] =
   { NULL, NULL, NULL, NULL, NULL, NULL, 0 }
 };
 
+static const char *advanced_ipv4_toggles[] =
+{
+  "IPV4_AUTO", "IPV4_AUTO", "IPV4_AUTO", "IPV4_AUTO_DNS", "IPV4_AUTO_DNS",
+  NULL
+};
+
+static const char *advanced_ipv4_entries[] =
+{
+  "IPV4_ADDRESS", "IPV4_NETMASK", "IPV4_GATEWAY", "IPV4_DNS1", "IPV4_DNS2",
+  NULL
+};
+
+static const char *advanced_ipv4_hosts[] =
+{
+  "IPV4_HTTP_HOST", "IPV4_HTTPS_HOST", "IPV4_FTP_HOST", "IPV4_RTSP_HOST",
+  NULL
+};
+
 static void
 iap_advanced_address_insert_text_cb(GtkEditable *editable, gchar *new_text,
                                     gint new_text_length, gpointer position,
@@ -245,6 +263,146 @@ iap_advanced_address_insert_text_cb(GtkEditable *editable, gchar *new_text,
   {
     if ((unsigned char)(new_text[i] - '0') > 9)
       new_text[i] = '.';
+  }
+}
+
+static gboolean
+iap_advanced_host_changed_cb(GtkWidget *widget, struct iap_wizard_advanced *adv)
+{
+  const char *text;
+  gchar **split;
+  gchar **s;
+  gboolean rv = FALSE;
+
+  text = gtk_entry_get_text(GTK_ENTRY(widget));
+  split = g_strsplit_set(text, ".", -1);
+
+  if (strlen(text) > 255)
+    goto out;
+
+  s = split;
+
+  while (*s)
+  {
+    size_t len = strlen(*s);
+
+    if (len > 63 || *s[0] == '-' || *s[len - 1] == '-')
+      goto out;
+
+    s++;
+  }
+
+  rv = TRUE;
+
+out:
+  g_strfreev(split);
+  gtk_dialog_set_response_sensitive(
+        GTK_DIALOG(adv->dialog), GTK_RESPONSE_OK, rv);
+
+  return rv;
+}
+
+static void
+iap_advanced_check_proxies(struct iap_wizard_advanced *adv)
+{
+  gpointer use_proxy_widget =
+      g_hash_table_lookup(adv->widgets, "IPV4_USE_PROXY");
+  gpointer use_auto_proxy_widget =
+      g_hash_table_lookup(adv->widgets, "IPV4_AUTO_PROXY");
+
+  g_return_if_fail(use_proxy_widget != NULL && use_auto_proxy_widget != NULL);
+
+  if (!gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(use_proxy_widget)) ||
+      gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(use_auto_proxy_widget)))
+  {
+    gtk_dialog_set_response_sensitive(GTK_DIALOG(adv->dialog),
+                                      GTK_RESPONSE_OK, TRUE);
+  }
+  else
+  {
+    const char *host = advanced_ipv4_hosts[0];
+
+    while (host)
+    {
+      gpointer widget = g_hash_table_lookup(adv->widgets, host);
+
+      if (widget && !iap_advanced_host_changed_cb(GTK_WIDGET(widget), adv))
+        break;
+
+      host++;
+    }
+  }
+}
+
+static void
+iap_advanced_check_page(struct iap_wizard_advanced *adv, int page)
+{
+  struct iap_advanced_widget *widget;
+  int i = 0;
+  gboolean sensitive;
+  GtkWidget *w;
+
+  if (page < 0)
+    return;
+
+  widget = adv->pages[page].widgets;
+
+  if (!widget)
+    return;
+
+  iap_advanced_check_proxies(adv);
+
+  while (widget->id || ++i < 3)
+  {
+    if (widget->id && (widget->proxy_id || widget->auto_proxy_id))
+    {
+      GtkWidget *auto_proxy_button = NULL;
+      GtkWidget *proxy_button = NULL;
+
+      if (widget->proxy_id)
+      {
+        proxy_button =
+            GTK_WIDGET(g_hash_table_lookup(adv->widgets, widget->proxy_id));
+      }
+
+      if (widget->auto_proxy_id)
+      {
+        auto_proxy_button =
+            GTK_WIDGET(g_hash_table_lookup(adv->widgets,
+                                           widget->auto_proxy_id));
+      }
+
+      sensitive = TRUE;
+
+      if (proxy_button)
+      {
+        if (!gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(proxy_button)) ||
+            !GTK_WIDGET_SENSITIVE(proxy_button) ||
+            !GTK_WIDGET_PARENT_SENSITIVE(proxy_button))
+        {
+          sensitive = FALSE;
+        }
+      }
+
+      if (auto_proxy_button)
+      {
+        GtkToggleButton *button = GTK_TOGGLE_BUTTON(auto_proxy_button);
+
+        if (gtk_toggle_button_get_active(button) &&
+            GTK_WIDGET_SENSITIVE(auto_proxy_button) &&
+            GTK_WIDGET_PARENT_SENSITIVE(auto_proxy_button))
+        {
+          sensitive = FALSE;
+        }
+      }
+
+      w = GTK_WIDGET(g_hash_table_lookup(adv->widgets, widget->id));
+
+      if (w)
+        gtk_widget_set_sensitive(gtk_widget_get_parent(w), sensitive);
+    }
+
+    widget++;
   }
 }
 
@@ -265,7 +423,7 @@ iap_advanced_widget_toggled_cb(GtkToggleButton *togglebutton,
 {
   struct iap_wizard_advanced *adv = (struct iap_wizard_advanced *)user_data;
 
-  iap_advanced_check_proxies(adv, gtk_notebook_get_current_page(adv->notebook));
+  iap_advanced_check_page(adv, gtk_notebook_get_current_page(adv->notebook));
 }
 
 static void
@@ -275,7 +433,7 @@ iap_advanced_notebook_switch_page_cb(GtkNotebook *notebook, gpointer page,
   struct iap_wizard_advanced *adv = (struct iap_wizard_advanced *)user_data;
   struct iap_advanced_page *p;
 
-  iap_advanced_check_proxies(adv, page_num);
+  iap_advanced_check_page(adv, page_num);
 
   p = &adv->pages[page_num];
 
@@ -420,24 +578,6 @@ iap_advanced_restore_state(struct iap_wizard_advanced *adv,
   return rv;
 }
 
-static const char *advanced_ipv4_toggles[] =
-{
-  "IPV4_AUTO", "IPV4_AUTO", "IPV4_AUTO", "IPV4_AUTO_DNS", "IPV4_AUTO_DNS",
-  NULL
-};
-
-static const char *advanced_ipv4_entries[] =
-{
-  "IPV4_ADDRESS", "IPV4_NETMASK", "IPV4_GATEWAY", "IPV4_DNS1", "IPV4_DNS2",
-  NULL
-};
-
-static const char *advanced_ipv4_hosts[] =
-{
-  "IPV4_HTTP_HOST", "IPV4_HTTPS_HOST", "IPV4_FTP_HOST", "IPV4_RTSP_HOST",
-  NULL
-};
-
 static void
 iap_advanced_dialog_response_cb(GtkDialog *dialog, gint response_id,
                                 gpointer user_data)
@@ -551,13 +691,38 @@ iap_advanced_address_key_press(GtkWidget *widget, GdkEventKey *event,
   return rv;
 }
 
+static void
+iap_advanced_host_insert_text_cb(GtkEditable *editable, gchar *new_text,
+                                 gint new_text_length, gpointer position,
+                                 gpointer user_data)
+{
+  int i;
+
+  for (i = 0; i < new_text_length; i++)
+  {
+    gchar c = new_text[i];
+
+    if (c == '?' || c == ',' || c == '=')
+    {
+      new_text[i] = '.';
+      continue;
+    }
+
+    if ((c < 'a' || c > 'z') && (c < '0' || c > '9') && c != '-' && c != '.')
+    {
+      g_signal_stop_emission_by_name(G_OBJECT(editable), "insert_text");
+      return;
+    }
+  }
+}
+
 struct iap_wizard_advanced *
 iap_advanced_create(gpointer user_data, GtkWindow *parent,
                     struct iap_advanced_page *pages, struct stage_widget *sw,
                     struct stage *s)
 {
   int adv_page_cnt;
-  int plugin_page_cnt;
+  int plugin_page_cnt = 0;
   int i;
   struct iap_advanced_page *page;
   gpointer ipv4_auto;
@@ -580,7 +745,7 @@ iap_advanced_create(gpointer user_data, GtkWindow *parent,
   iap_common_set_close_response(adv->dialog, GTK_RESPONSE_CANCEL);
   gtk_window_set_default_size(GTK_WINDOW(adv->dialog), 640, 270);
 
-  adv->notebook = GTK_NOTEBOOK(gtk_notebook_new());
+  adv->notebook = notebook = GTK_NOTEBOOK(gtk_notebook_new());
   gtk_notebook_set_show_tabs(notebook, TRUE);
   gtk_notebook_set_show_border(notebook, FALSE);
 
