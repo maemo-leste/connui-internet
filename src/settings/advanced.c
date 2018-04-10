@@ -764,7 +764,7 @@ iap_advanced_create(gpointer user_data, GtkWindow *parent,
   for (i = 0; i < adv_page_cnt; i++)
   {
     memcpy(&adv->pages[i], &iap_advanced_pages[i],
-           sizeof(struct iap_advanced_page *));
+           sizeof(struct iap_advanced_page));
   }
 
   if (pages)
@@ -772,7 +772,7 @@ iap_advanced_create(gpointer user_data, GtkWindow *parent,
     for (i = 0; i < plugin_page_cnt; i++)
     {
       memcpy(&adv->pages[i + adv_page_cnt], &pages[i],
-             sizeof(struct iap_advanced_page *));
+             sizeof(struct iap_advanced_page));
     }
   }
 

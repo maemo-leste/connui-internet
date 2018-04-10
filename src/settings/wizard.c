@@ -1343,7 +1343,7 @@ iap_wizard_restore_state(struct iap_wizard *iw, struct stage_cache *data)
 {
   GSList *l;
   guint8 len;
-  int page_idx;
+  int page_idx = 0;
 
   if (data->processed + sizeof(len) > data->len)
     return 0;

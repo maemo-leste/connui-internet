@@ -482,7 +482,7 @@ static struct stage_widget iap_easy_wlan_ent_wpa_psk_widgets[] =
   { NULL, NULL, NULL, NULL, NULL, NULL, NULL }
 };
 
-static const gint EAP_default_type[] = {25, 13, 21, -1};
+static gint EAP_default_type[] = {25, 13, 21, -1};
 
 static struct stage_widget iap_easy_wlan_wpa_eap_type_widgets[] =
 {
@@ -493,7 +493,7 @@ static struct stage_widget iap_easy_wlan_wpa_eap_type_widgets[] =
     "EAP_default_type",
     NULL,
     &mapper_combo2int,
-    &EAP_default_type
+    EAP_default_type
   },
   { NULL, NULL, NULL, NULL, NULL, NULL, NULL }
 };
@@ -512,7 +512,7 @@ static struct stage_widget iap_easy_wlan_wpa_eap_tls_auth_widgets[] =
   { NULL, NULL, NULL, NULL, NULL, NULL, NULL }
 };
 
-static const gint PEAP_tunneled_eap_type[] = {6, 26, 99, 98, -1};
+static gint PEAP_tunneled_eap_type[] = {6, 26, 99, 98, -1};
 
 static struct stage_widget iap_easy_wlan_wpa_eap_ttls_auth_widgets[] =
 {
@@ -532,7 +532,7 @@ static struct stage_widget iap_easy_wlan_wpa_eap_ttls_auth_widgets[] =
     "PEAP_tunneled_eap_type",
     NULL,
     &mapper_combo2int,
-    &PEAP_tunneled_eap_type
+    PEAP_tunneled_eap_type
   }
 };
 
