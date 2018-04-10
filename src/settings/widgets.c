@@ -223,7 +223,7 @@ iap_widgets_iterate_certs_cb(int order, X509 *cert, void *user_data)
         else
           cert_name = g_strdup(common_name);
 
-        CRYPTO_free(common_name);
+        OPENSSL_free(common_name);
       }
     }
 
@@ -272,13 +272,13 @@ iap_widgets_iterate_certs_cb(int order, X509 *cert, void *user_data)
       }
 
       if (org_unit_name)
-        CRYPTO_free(org_unit_name);
+        OPENSSL_free(org_unit_name);
 
       if (org_name)
-        CRYPTO_free(org_name);
+        OPENSSL_free(org_name);
 
       if (country_name)
-        CRYPTO_free(country_name);
+        OPENSSL_free(country_name);
 
       if (cert_name)
       {
