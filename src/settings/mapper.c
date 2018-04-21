@@ -469,7 +469,7 @@ static gboolean strlist_equal(gchar **sa1, gchar **sa2)
     if (strcmp(sa1[i], sa2[i]))
       return FALSE;
 
-      i++;
+    i++;
   }
 
   return TRUE;
