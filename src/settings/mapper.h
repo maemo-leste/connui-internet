@@ -22,24 +22,24 @@ typedef void (* stage2widget_fn)(const struct stage *s, GtkWidget *entry, const 
 
 struct widget_mapper
 {
-  widget2stage_fn widget2stage;
   stage2widget_fn stage2widget;
+  widget2stage_fn widget2stage;
 };
 
-#define MAPPER_IMPL(from, to) \
+#define MAPPER_IMPL(widget_type, stage_type) \
  \
-static void from##2##to(struct stage *s, const GtkWidget *entry, const struct stage_widget *sw); \
-static void to##2##from(const struct stage *s, GtkWidget *entry, const struct stage_widget *sw); \
+static void widget_type##2##stage_type(struct stage *s, const GtkWidget *entry, const struct stage_widget *sw); \
+static void stage_type##2##widget_type(const struct stage *s, GtkWidget *entry, const struct stage_widget *sw); \
  \
-struct widget_mapper mapper_##from##2##to = {from##2##to, to##2##from}
+struct widget_mapper mapper_##widget_type##2##stage_type = {stage_type##2##widget_type, widget_type##2##stage_type}
 
-#define MAPPER_DECL(from, to) \
-extern struct widget_mapper mapper_##from##2##to;
+#define MAPPER_DECL(widget_type, stage_type) \
+extern struct widget_mapper mapper_##widget_type##2##stage_type;
 
 #ifdef MAPPER_STOCK_IMPL
-# define MAPPER(from, to) MAPPER_IMPL(from, to)
+# define MAPPER(widget_type, stage_type) MAPPER_IMPL(widget_type, stage_type)
 #else
-# define MAPPER(from, to) MAPPER_DECL(from, to)
+# define MAPPER(widget_type, stage_type) MAPPER_DECL(widget_type, stage_type)
 #endif
 
 MAPPER(entry, string);
@@ -54,7 +54,7 @@ MAPPER(combo, stringlist);
 MAPPER(combo, stringlistfuzzy);
 
 #undef MAPPER
-#define MAPPER(from, to) MAPPER_IMPL(from, to)
+#define MAPPER(widget, stage) MAPPER_IMPL(widget, stage)
 
 typedef GtkWidget *(*mapper_get_widget_fn)(gpointer user_data, const gchar *id);
 

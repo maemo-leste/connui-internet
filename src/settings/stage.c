@@ -583,7 +583,7 @@ stage_get_stringlist(const struct stage *s, const gchar *key)
 
     rv = g_new0(gchar *, g_slist_length(l) + 1);
 
-    while (l)
+    for (; l; l = l->next)
       rv[i++] = g_strdup(gconf_value_get_string((const GConfValue *)l->data));
 
     rv[i] = NULL;

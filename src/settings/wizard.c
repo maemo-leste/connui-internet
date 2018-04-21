@@ -929,6 +929,7 @@ iap_wizard_create(gpointer user_data, GtkWindow *parent)
   {
     page->priv = iw;
     g_hash_table_insert(iw->pages, page->id, page);
+    page++;
   }
 
   iap_wizard_load_plugins(iw);

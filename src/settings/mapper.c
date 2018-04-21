@@ -418,11 +418,11 @@ string2combo(const struct stage *s, GtkWidget *entry,
 
     if (str)
     {
-      while (*strlist && strcmp(*strlist, str))
+      while (strlist[i] && strcmp(strlist[i], str))
         i++;
     }
 
-    if (!*strlist)
+    if (!strlist[i])
       i = 0;
 
     set_active(entry, i);
@@ -602,7 +602,7 @@ mapper_import_widgets(struct stage *s, struct stage_widget *sw,
 
   while ((id = sw->name))
   {
-    const GtkWidget *widget = get_widget(user_data, id);
+    GtkWidget *widget = get_widget(user_data, id);
 
     if (widget)
     {
@@ -611,7 +611,7 @@ mapper_import_widgets(struct stage *s, struct stage_widget *sw,
         if (sw->import)
           sw->import(user_data, s, sw);
 
-        sw->mapper->widget2stage(s, widget, sw);
+        sw->mapper->stage2widget(s, widget, sw);
       }
     }
 
@@ -628,7 +628,7 @@ mapper_export_widgets(struct stage *s, struct stage_widget *sw,
 
   while ((id = sw->name))
   {
-    GtkWidget *widget = get_widget(user_data, id);
+    const GtkWidget *widget = get_widget(user_data, id);
 
     if (widget)
     {
@@ -642,7 +642,7 @@ mapper_export_widgets(struct stage *s, struct stage_widget *sw,
       }
       else
       {
-        sw->mapper->stage2widget(s, widget, sw);
+        sw->mapper->widget2stage(s, widget, sw);
         g_hash_table_insert(hash, (gpointer)sw->key, GINT_TO_POINTER(TRUE));
       }
     }
