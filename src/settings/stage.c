@@ -634,3 +634,163 @@ stage_set_val(struct stage *s, const gchar *key, GConfValue *val)
 {
   s->impl->set(s, key, val);
 }
+
+gboolean
+stage_restore_cache(struct stage *s, struct stage_cache *data)
+{
+  guint8 *key;
+  guint8 type;
+  GConfValue *val;
+  guint16 len;
+
+  while (1)
+  {
+    if (data->processed + sizeof(len) > data->len)
+      return FALSE;
+
+    memcpy(&len, &data->data[data->processed], sizeof(len));
+    data->processed += sizeof(len);
+
+    if (!len)
+      return TRUE;
+
+    if (data->processed + len > data->len)
+      return FALSE;
+
+    key = &data->data[data->processed];
+    data->processed += len;
+
+    if (data->processed + sizeof(type) > data->len)
+      return FALSE;
+
+    type = data->data[data->processed];
+    data->processed += sizeof(type);
+
+    switch (type)
+    {
+      case GCONF_VALUE_STRING:
+      {
+        if (data->processed + sizeof(len) > data->len)
+          return FALSE;
+
+        memcpy(&len, &data->data[data->processed], sizeof(len));
+        data->processed += sizeof(len);
+
+        if (data->processed + len > data->len)
+          return FALSE;
+
+        val = gconf_value_new(GCONF_VALUE_STRING);
+        gconf_value_set_string(val, (gchar *)&data->data[data->processed]);
+        data->processed += len;
+        break;
+      }
+      case GCONF_VALUE_INT:
+      {
+        gint n;
+
+        if (data->processed + sizeof(n) > data->len)
+          return FALSE;
+
+        memcpy(&n, &data->data[data->processed], sizeof(n));
+        data->processed += sizeof(n);
+        val = gconf_value_new(GCONF_VALUE_INT);
+        gconf_value_set_int(val, n);
+        break;
+      }
+      case GCONF_VALUE_BOOL:
+      {
+        gboolean b;
+
+        if (data->processed + sizeof(b) > data->len)
+          return FALSE;
+
+        memcpy(&b, &data->data[data->processed], sizeof(b));
+        data->processed += sizeof(b);
+        val = gconf_value_new(GCONF_VALUE_BOOL);
+        gconf_value_set_bool(val, b);
+        break;
+      }
+      case GCONF_VALUE_LIST:
+      {
+        GSList *l = NULL;
+        int i;
+
+        /* list type */
+        if (data->processed + sizeof(type) > data->len)
+          return FALSE;
+
+        type = data->data[data->processed];
+        data->processed += sizeof(type);
+
+        /* list len */
+        if (data->processed + sizeof(len) > data->len)
+          return FALSE;
+
+        memcpy(&len, &data->data[data->processed], sizeof(len));
+        data->processed +=sizeof(len);
+
+        for (i = 0; i < len; i++)
+        {
+          switch (type)
+          {
+            case GCONF_VALUE_INT:
+            {
+              guint8 n;
+
+              if (data->processed + sizeof(n) > data->len)
+              {
+                g_slist_free(l);
+                return FALSE;
+              }
+
+              n = data->data[data->processed];
+              data->processed += sizeof(n);
+
+              val = gconf_value_new(GCONF_VALUE_INT);
+              gconf_value_set_int(val, n);
+              l = g_slist_prepend(l, val);
+            }
+            case GCONF_VALUE_STRING:
+            {
+              guint16 slen;
+
+              /* string len */
+              if (data->processed + sizeof(slen) > data->len)
+              {
+                g_slist_free(l);
+                return FALSE;
+              }
+
+              memcpy(&slen, &data->data[data->processed], sizeof(slen));
+              data->processed +=sizeof(slen);
+
+              /* string data */
+              if (data->processed + slen > data->len)
+              {
+                g_slist_free(l);
+                return FALSE;
+              }
+
+              val = gconf_value_new(GCONF_VALUE_STRING);
+              gconf_value_set_string(val,
+                                     (gchar *)&data->data[data->processed]);
+              data->processed += slen;
+              l = g_slist_prepend(l, val);
+            }
+          }
+        }
+
+        l = g_slist_reverse(l);
+        val = gconf_value_new(GCONF_VALUE_LIST);
+        gconf_value_set_list_type(val, type);
+        gconf_value_set_list_nocopy(val, l);
+        break;
+      }
+      default:
+        val = NULL;
+        break;
+    }
+
+    s->impl->set(s, (const gchar *)key, val);
+  }
+}
