@@ -1,4 +1,5 @@
 AM_CFLAGS = -Wall -Werror $(LIBHILDON_CFLAGS) $(CONNUI_CFLAGS) \
+	    $(MAEMOSEC_CFLAGS) $(GMODULE_CFLAGS) \
 	    -DG_LOG_DOMAIN=\"$(PACKAGE)\"
 AM_LDFLAGS = $(LIBHILDON_LIBS) $(CONNUI_LIBS)
 
@@ -11,4 +12,6 @@ libconnui_iapsettings_la_SOURCES = widgets.c \
 				   advanced.c \
 				   wizard.c
 
-libconnui_iapsettings_la_LIBADD = $(LIBHILDON_LIBS) $(CONNUI_LIBS) $(MCE_LIBS)
+libconnui_iapsettings_la_LIBADD = $(LIBHILDON_LIBS) $(CONNUI_LIBS) \
+				  $(MCE_LIBS) $(MAEMOSEC_LIBS) \
+				  $(GMODULE_LIBS)
