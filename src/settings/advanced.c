@@ -338,7 +338,6 @@ static void
 iap_advanced_check_page(struct iap_wizard_advanced *adv, int page)
 {
   struct iap_advanced_widget *widget;
-  int i = 0;
   gboolean sensitive;
   GtkWidget *w;
 
@@ -352,7 +351,7 @@ iap_advanced_check_page(struct iap_wizard_advanced *adv, int page)
 
   iap_advanced_check_proxies(adv);
 
-  while (widget->id || ++i < 3)
+  while (widget->id)
   {
     if (widget->id && (widget->proxy_id || widget->auto_proxy_id))
     {
