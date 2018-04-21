@@ -10,8 +10,9 @@ conndlgslib_LTLIBRARIES = \
 	libiap_dialog_others.la
 
 libiap_conndlg_la_SOURCES = iap-conndlg.c
-libiap_conndlg_la_CFLAGS = $(AM_CFLAGS) $(MCE_CFLAGS)
-libiap_conndlg_la_LIBADD = $(LIBHILDON_LIBS) $(CONNUI_LIBS) $(MCE_LIBS)
+libiap_conndlg_la_CFLAGS = $(AM_CFLAGS) $(MCE_CFLAGS) -I../settings
+libiap_conndlg_la_LIBADD = $(LIBHILDON_LIBS) $(CONNUI_LIBS) $(MCE_LIBS) \
+			   $(top_builddir)/src/settings/libconnui_iapsettings.la
 
 libiap_dialog_disconnect_la_SOURCES = iap-dialog-disconnect.c
 

@@ -13,6 +13,9 @@
 
 #include <string.h>
 
+#include "easy-wlan.h"
+#include "easy-gprs.h"
+
 static void iap_conndlg_close();
 
 IAP_DIALOGS_PLUGIN_DEFINE_EXTENDED(iap_conndlg, ICD_UI_SHOW_CONNDLG_REQ,
@@ -283,13 +286,11 @@ iap_conndlg_activate_iap_connection(GtkTreeModel *model, GtkTreeIter *iter,
             dbus_uint32_t cap = 0;
             dbus_uint32_t wlancond_capability =
                 nwattr2cap(scan_entry->network.network_attributes, &cap);
-#if 0
+
             chosen_network_id = iap_run_easy_wlan_dialogs(
                   (*iap_conndlg)->libosso, GTK_WINDOW((*iap_conndlg)->dialog),
                   scan_entry->network.network_id, &wlancond_capability);
-#else
-            hildon_banner_show_information(GTK_WIDGET((*iap_conndlg)->dialog), NULL, "iap_run_easy_wlan_dialogs");
-#endif
+
             cap2nwattr(wlancond_capability,
                        &scan_entry->network.network_attributes);
           }
@@ -297,14 +298,10 @@ iap_conndlg_activate_iap_connection(GtkTreeModel *model, GtkTreeIter *iter,
           {
             if (!scan_entry->network_name || !*scan_entry->network_name)
             {
-#if 0
               chosen_network_id =
                   iap_run_easy_gprs_dialogs((*iap_conndlg)->libosso,
                                             GTK_WINDOW((*iap_conndlg)->dialog),
                                             scan_entry->network.network_id);
-#else
-            hildon_banner_show_information(GTK_WIDGET((*iap_conndlg)->dialog), NULL, "iap_run_easy_gprs_dialogs");
-#endif
             }
           }
 
