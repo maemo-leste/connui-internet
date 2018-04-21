@@ -50,6 +50,8 @@ MAPPER(toggle, int);
 MAPPER(toggle, bool);
 MAPPER(combo, int);
 MAPPER(combo, string);
+MAPPER(combo, stringlist);
+MAPPER(combo, stringlistfuzzy);
 
 #undef MAPPER
 #define MAPPER(from, to) MAPPER_IMPL(from, to)

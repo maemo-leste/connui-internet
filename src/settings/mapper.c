@@ -457,6 +457,143 @@ combo2string(struct stage *s, const GtkWidget *entry,
   g_free(str);
 }
 
+static gboolean strlist_equal(gchar **sa1, gchar **sa2)
+{
+  int i = 0;
+
+  if (g_strv_length(sa1) != g_strv_length(sa2))
+    return FALSE;
+
+  while (sa1[i])
+  {
+    if (strcmp(sa1[i], sa2[i]))
+      return FALSE;
+
+      i++;
+  }
+
+  return TRUE;
+}
+
+static void
+stringlist2combo(const struct stage *s, GtkWidget *entry,
+                 const struct stage_widget *sw)
+{
+  gchar ***priv = (gchar ***)sw->priv;
+  gchar **strlist = stage_get_stringlist(s, sw->key);;
+  gint active = 0;
+
+  if (!strlist)
+  {
+    strlist = g_new0(gchar *, 1);
+    *strlist = NULL;
+  }
+
+  while (priv[active])
+  {
+    if (strlist_equal(priv[active], strlist))
+      break;
+  }
+
+  g_strfreev(strlist);
+
+  set_active(entry, active);
+}
+
+static void
+combo2stringlist(struct stage *s, const GtkWidget *entry,
+                 const struct stage_widget *sw)
+{
+  const gchar ***priv = (const gchar ***)sw->priv;
+  gint active = get_active(entry);
+  const gchar **strlist = NULL;
+
+  if (active >= 0)
+    strlist = priv[active];
+
+  if (strlist)
+    stage_set_stringlist(s, sw->key, strlist);
+  else
+    stage_set_val(s, sw->key, NULL);
+}
+
+static void
+stringlistfuzzy2combo(const struct stage *s, GtkWidget *entry,
+                      const struct stage_widget *sw)
+{
+  gchar ***priv = (gchar ***)sw->priv;
+  gchar **strlist = stage_get_stringlist(s, sw->key);
+  gint active = 0;
+  int max = 0;
+  int i = 0;
+
+  if (!strlist)
+  {
+    strlist = g_new0(gchar *, 1);
+    *strlist = NULL;
+  }
+
+  if (!*strlist)
+  {
+    set_active(entry, 0);
+    g_strfreev(strlist);
+    return;
+  }
+
+  while (priv[i])
+  {
+    if (strlist_equal(priv[i], strlist))
+    {
+      set_active(entry, i);
+      g_strfreev(strlist);
+      return;
+    }
+
+    i++;
+  }
+
+  i = 0;
+
+  while (priv[i])
+  {
+    gchar **p = priv[i];
+    int match = 0;
+    int j = 0;
+
+    while (p[j])
+    {
+      int k = 0;
+
+      while (strlist[k])
+      {
+        if (!strcmp(p[j], strlist[k]))
+          match++;
+
+        k++;
+      }
+    }
+
+    if (match > max)
+    {
+      active = i;
+      max = match;
+    }
+
+    i++;
+  }
+
+  set_active(entry, active);
+
+  g_strfreev(strlist);
+}
+
+static void
+combo2stringlistfuzzy(struct stage *s, const GtkWidget *entry,
+                      const struct stage_widget *sw)
+{
+  combo2stringlist(s, entry, sw);
+}
+
 void
 mapper_import_widgets(struct stage *s, struct stage_widget *sw,
                       mapper_get_widget_fn get_widget, gpointer user_data)
