@@ -1053,3 +1053,51 @@ iap_hidden_ssid_dialog(GtkWindow *parent, gchar **ssid, guint *wlan_capability)
 
   return get_capability_for_ssid(*ssid, wlan_capability);
 }
+
+guint
+iap_wlan_to_iap_security(const char *security, guint iap_security, int iap_auth)
+{
+  if (!security || !strcmp(security, "NONE"))
+    return 0x10000;
+
+  if (!strcmp(security, "WEP"))
+    return 0x20000;
+
+  if (!strcmp(security, "WPA_PSK"))
+    return 0x80000;
+
+  if (strcmp(security, "WPA_EAP"))
+    return 0x10000;
+
+  switch (iap_security)
+  {
+    case 13:
+      return 0x400000;
+    case 17:
+      return 0x4000000;
+    case 18:
+      return 0x200000;
+    case 21:
+      if(iap_auth == 6)
+        return 0x20800000;
+      else if (iap_auth == 26)
+        return 0x21000000;
+      else if (iap_auth == 98)
+        return 0x28000000;
+      else if (iap_auth == 99)
+        return 0x22000000;
+      else
+        return 0x20000000;
+    case 23:
+      return 0x100000;
+    case 25:
+      if (iap_auth == 6)
+        return 0x10800000;
+      else if (iap_auth == 26)
+        return 0x11000000;
+      else
+        return 0x10000000;
+    default:
+      return 0xFFF00000;
+  }
+}
