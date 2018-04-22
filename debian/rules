@@ -9,6 +9,8 @@ DEB_DESTDIR=$(CURDIR)/debian/tmp
 DEB_DH_MAKESHLIBS_ARGS := --exclude=plugin --exclude=applet
 
 DEB_DBG_PACKAGE_connui-statusbar-internet = connui-statusbar-internet-dbg
+DEB_DBG_PACKAGE_connui-conndlgs-internet = connui-conndlgs-internet-dbg
+DEB_DBG_PACKAGE_connui-iapsettings = connui-iapsettings-dbg
 
 CFLAGS := $(CFLAGS) -Werror
 

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Encoding=UTF-8
+Version=1.0
+Type=HildonControlPanelPlugin
+X-Text-Domain=osso-connectivity-ui
+Name=conn_set_ti_conn_set
+Icon=control_internet_setup
+Categories=connectivity
+X-control-panel-plugin=libinternetsettings.so

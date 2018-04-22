@@ -2,7 +2,7 @@ Source: connui-internet
 Priority: optional
 Section: x11
 Maintainer: Ivaylo Dimitrov <freemangordon@abv.bg>
-Build-Depends: debhelper (>= 5), cdbs, libhildon1-dev, libhildondesktop1-dev, osso-af-settings, icd2-dev, libosso-dev, libconnui-dev (>= 2.88.7), libconbtui0-dev, mce-dev, icd2-osso-ic-dev, libmaemosec-certman-dev
+Build-Depends: debhelper (>= 5), cdbs, libhildon1-dev, libhildondesktop1-dev, osso-af-settings, icd2-dev, libosso-dev, libconnui-dev (>= 2.88.7), libconbtui0-dev, mce-dev, icd2-osso-ic-dev, libmaemosec-certman-dev, icd2-dev, hildon-control-panel-dev
 Standards-Version: 3.7.3
 
 Package: connui-statusbar-internet
@@ -52,3 +52,15 @@ Description: Internet Settings UI for Hildon Control Panel
  edit and delete Internet Access Point configurations. It also allows you
  to tune some generic ICd parameters like connection timeouts and preferred
  IAP
+
+Package: connui-iapsettings-dbg
+Architecture: any
+Section: extra
+Depends: ${misc:Depends}, connui-iapsettings (= ${binary:Version})
+Description: Internet Settings UI for Hildon Control Panel
+ This package provides the Internet Settings UI that allows you to create,
+ edit and delete Internet Access Point configurations. It also allows you
+ to tune some generic ICd parameters like connection timeouts and preferred
+ IAP
+ .
+ This package contains the debug symbols.
