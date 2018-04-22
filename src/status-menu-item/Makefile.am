@@ -11,12 +11,7 @@ connui_internet_status_menu_item_la_LIBADD = \
 
 connui_internet_status_menu_item_la_LDFLAGS = -module -avoid-version
 
-AM_CFLAGS = \
-		$(ACCOUNTS_CFLAGS)
-		-Wall -Werror \
-		-DG_LOG_DOMAIN=\"$(PACKAGE)\"
-
-AM_LIBS = $(ACCOUNTS_LIBS)
+AM_CFLAGS = -Wall -Werror -DG_LOG_DOMAIN=\"$(PACKAGE)\"
 
 hildonstatusmenudesktopentry_DATA = connui-internet.desktop
 EXTRA_DIST = $(hildonstatusmenudesktopentry_DATA)
