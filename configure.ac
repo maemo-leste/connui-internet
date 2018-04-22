@@ -60,6 +60,10 @@ PKG_CHECK_MODULES(HILDON, hildon-control-panel >= 0.10.0)
 AC_SUBST(HILDON_CFLAGS)
 AC_SUBST(HILDON_LIBS)
 
+PKG_CHECK_MODULES(ICD, icd2)
+AC_SUBST(ICD_CFLAGS)
+AC_SUBST(ICD_LIBS)
+
 dnl Localization
 GETTEXT_PACKAGE=osso-connectivity-ui
 AC_SUBST(GETTEXT_PACKAGE)
@@ -78,6 +82,9 @@ AC_SUBST(hildonstatusmenudesktopentrydir)
 
 hildonpluginlibdir=`$PKG_CONFIG --variable=pluginlibdir hildon-control-panel`
 AC_SUBST(hildonpluginlibdir)
+
+hildoncpdesktopentrydir=`$PKG_CONFIG --variable=plugindesktopentrydir hildon-control-panel`
+AC_SUBST(hildoncpdesktopentrydir)
 
 AC_ARG_ENABLE(cast-checks,  [  --disable-cast-checks   compile with GLIB cast checks disabled],[cchecks=${enableval}],cchecks=yes)
 if test "x$cchecks" = "xno"; then
