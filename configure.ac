@@ -18,6 +18,7 @@ AC_CONFIG_FILES([
 	src/status-menu-item/Makefile
 	src/settings/Makefile
 	src/iap/Makefile
+	src/applet/Makefile
 	data/Makefile
 ])
 
@@ -30,24 +31,34 @@ AC_PROG_LIBTOOL
 AM_GCONF_SOURCE_2
 
 PKG_CHECK_MODULES(OSSO_AF_SETTINGS, osso-af-settings)
+
 PKG_CHECK_MODULES(LIBHILDON, libhildondesktop-1)
 AC_SUBST(LIBHILDON_CFLAGS)
 AC_SUBST(LIBHILDON_LIBS)
+
 PKG_CHECK_MODULES(CONNUI, connui)
 AC_SUBST(CONNUI_CFLAGS)
 AC_SUBST(CONNUI_LIBS)
+
 PKG_CHECK_MODULES(MCE, mce)
 AC_SUBST(MCE_CFLAGS)
 AC_SUBST(MCE_LIBS)
+
 PKG_CHECK_MODULES(CONBTUI, conbtui)
 AC_SUBST(CONBTUI_CFLAGS)
 AC_SUBST(CONBTUI_LIBS)
+
 PKG_CHECK_MODULES(MAEMOSEC, maemosec >= 0.0.3 maemosec-certman >= 0.0.3 )
 AC_SUBST(MAEMOSEC_CFLAGS)
 AC_SUBST(MAEMOSEC_LIBS)
-PKG_CHECK_MODULES(GMODULE, gmodule-2.0 )
+
+PKG_CHECK_MODULES(GMODULE, gmodule-2.0)
 AC_SUBST(GMODULE_CFLAGS)
 AC_SUBST(GMODULE_LIBS)
+
+PKG_CHECK_MODULES(HILDON, hildon-control-panel >= 0.10.0)
+AC_SUBST(HILDON_CFLAGS)
+AC_SUBST(HILDON_LIBS)
 
 dnl Localization
 GETTEXT_PACKAGE=osso-connectivity-ui
@@ -64,6 +75,9 @@ AC_SUBST(hildondesktoplibdir)
 
 hildonstatusmenudesktopentrydir="`$PKG_CONFIG --variable=hildonstatusmenudesktopentrydir libhildondesktop-1`"
 AC_SUBST(hildonstatusmenudesktopentrydir)
+
+hildonpluginlibdir=`$PKG_CONFIG --variable=pluginlibdir hildon-control-panel`
+AC_SUBST(hildonpluginlibdir)
 
 AC_ARG_ENABLE(cast-checks,  [  --disable-cast-checks   compile with GLIB cast checks disabled],[cchecks=${enableval}],cchecks=yes)
 if test "x$cchecks" = "xno"; then
