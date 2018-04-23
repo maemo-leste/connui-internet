@@ -1,3 +1,9 @@
+connui-internet (2.76) unstable; urgency=medium
+
+  * Leste packaging
+
+ -- Ivan J. <parazyd@dyne.org>  Mon, 23 Apr 2018 20:48:00 +0200
+
 connui-internet (2.75.4) fremantle; urgency=low
 
   * make others dialog actually work
