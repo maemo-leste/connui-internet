@@ -1,6 +1,7 @@
 AC_PREREQ([2.52])
 
-AC_INIT(connui-internet, 2.71)
+AC_INIT([connectivity-settings], patsubst(esyscmd([dpkg-parsechangelog | sed -n '/^Version: \(.*\)$/ {s//\1/;p}']), [
+]), [], [connectivity-settings])
 
 LT_CURRENT=1
 LT_REVISION=0
@@ -31,6 +32,8 @@ AC_PROG_LIBTOOL
 AM_GCONF_SOURCE_2
 
 PKG_CHECK_MODULES(OSSO_AF_SETTINGS, osso-af-settings)
+localedir=`pkg-config osso-af-settings --variable=localedir`
+AC_SUBST(localedir)
 
 PKG_CHECK_MODULES(LIBHILDON, libhildondesktop-1)
 AC_SUBST(LIBHILDON_CFLAGS)

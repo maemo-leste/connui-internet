@@ -49,6 +49,15 @@ struct iap_wizard
   } page;
 };
 
+enum wizzard_button
+{
+  WIZARD_BUTTON_FINISH = 0,
+  WIZARD_BUTTON_PREVIOUS = 1,
+  WIZARD_BUTTON_NEXT = 2,
+  WIZARD_BUTTON_CLOSE = 3,
+  WIZARD_BUTTON_ADVANCED = 4
+};
+
 GtkWidget *iap_wizard_get_dialog(struct iap_wizard *iw);
 struct stage *iap_wizard_get_active_stage(struct iap_wizard *iw);
 void iap_wizard_set_active_stage(struct iap_wizard *iw, struct stage *new_stage);
@@ -66,6 +75,7 @@ int iap_wizard_get_import_mode(struct iap_wizard *iw);
 void iap_wizard_set_import_mode(struct iap_wizard *iw, int mode);
 GtkWidget *iap_wizard_export(struct iap_wizard *iw, struct stage *s, gboolean reconnect);
 void iap_wizard_save_state(struct iap_wizard *iw, GByteArray *state);
+gboolean iap_wizard_restore_state(struct iap_wizard *iw, struct stage_cache *data);
 
 struct iap_wizard *iap_wizard_create(gpointer user_data, GtkWindow *parent);
 void iap_wizard_show(struct iap_wizard *iw);

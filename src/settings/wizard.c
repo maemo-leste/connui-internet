@@ -11,15 +11,6 @@
 #include "stage.h"
 #include "advanced.h"
 
-enum wizzard_button
-{
-  WIZARD_BUTTON_FINISH = 0,
-  WIZARD_BUTTON_PREVIOUS = 1,
-  WIZARD_BUTTON_NEXT = 2,
-  WIZARD_BUTTON_CLOSE = 3,
-  WIZARD_BUTTON_ADVANCED = 4
-};
-
 struct iap_wizard_page
 {
   gchar *id;

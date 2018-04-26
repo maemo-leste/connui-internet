@@ -305,7 +305,7 @@ iap_widgets_create_certificate_list_store()
   GtkTreeIter iter;
   domain_handle handle;
 
-  list_store = gtk_list_store_new(2);
+  list_store = gtk_list_store_new(2, G_TYPE_STRING, G_TYPE_STRING);
   gtk_list_store_append(list_store, &iter);
 
   gtk_list_store_set(list_store, &iter,

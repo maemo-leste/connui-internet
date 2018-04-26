@@ -14,7 +14,7 @@ struct stage_widget
   const gchar *key;
   void (*import)(gpointer, struct stage *, struct stage_widget *);
   const struct widget_mapper *mapper;
-  const gpointer priv;
+  gpointer priv;
 };
 
 typedef void (* widget2stage_fn)(struct stage *s, const GtkWidget *entry, const struct stage_widget *sw);
