@@ -1,3 +1,9 @@
+connui-internet (2.77) fremantle; urgency=low
+
+  * add control panel applet
+
+ -- Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>  Thu, 26 Apr 2018 19:55:23 +0300
+
 connui-internet (2.76) unstable; urgency=medium
 
   * Leste packaging
