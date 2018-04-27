@@ -502,7 +502,7 @@ iap_connections_response_cb(GtkDialog *dialog, gint response_id,
       gtk_widget_destroy(note);
       g_free(desc);
 
-      if (response_id == -GTK_RESPONSE_OK)
+      if (response_id == GTK_RESPONSE_OK)
       {
         if (entry)
           iap_network_entry_disconnect(ICD_CONNECTION_FLAG_UI_EVENT, entry);
