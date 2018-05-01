@@ -11,19 +11,6 @@
 #include "stage.h"
 #include "advanced.h"
 
-struct iap_wizard_page
-{
-  gchar *id;
-  gchar *msgid;
-  GtkWidget * (*create)(struct iap_wizard *iw);
-  const char * (*get_page)(struct iap_wizard *iw, gboolean show_note);
-  void (*finish)(struct iap_wizard *iw);
-  void (*prev)(struct iap_wizard *iw);
-  gchar *next_page;
-  gchar *unk2;
-  gpointer priv;
-};
-
 GtkWidget *
 iap_wizard_get_dialog(struct iap_wizard *iw)
 {
@@ -253,7 +240,7 @@ iap_wizard_load_plugins(struct iap_wizard *iw)
 }
 
 static GtkWidget *
-iap_wizard_welcome_page_create(struct iap_wizard *iw)
+iap_wizard_welcome_page_create(gpointer private)
 {
   GdkPixbuf *pixbuf;
   GtkWidget *hbox;
@@ -300,8 +287,9 @@ iap_wizard_complete_page_advanced_clicked_cb(HildonButton *button,
 }
 
 static GtkWidget *
-iap_wizard_complete_page_create(struct iap_wizard *iw)
+iap_wizard_complete_page_create(gpointer private)
 {
+  struct iap_wizard *iw = private;
   GtkWidget *vbox;
   GtkWidget *hbox;
   GdkPixbuf *pixbuf;
@@ -346,9 +334,9 @@ iap_wizard_complete_page_create(struct iap_wizard *iw)
 }
 
 static void
-iap_wizard_complete_page_finish(struct iap_wizard *iw)
+iap_wizard_complete_page_finish(gpointer private)
 {
-  iap_wizard_set_completed(iw, TRUE);
+  iap_wizard_set_completed(private, TRUE);
 }
 
 static int
@@ -380,8 +368,9 @@ iap_wizard_plugins_button_toggled_cb(GtkToggleButton *button,
 }
 
 static GtkWidget *
-iap_wizard_name_and_type_page_create(struct iap_wizard *iw)
+iap_wizard_name_and_type_page_create(gpointer private)
 {
+  struct iap_wizard *iw = private;
   GtkWidget *entry;
   GtkWidget *label;
   GtkWidget *caption;
@@ -509,8 +498,9 @@ iap_wizard_find_plugin(struct iap_wizard *iw, int *idx)
 }
 
 const char *
-iap_wizard_name_and_type_page_next(struct iap_wizard *iw, gboolean show_note)
+iap_wizard_name_and_type_page_next(gpointer private, gboolean show_note)
 {
+  struct iap_wizard *iw = private;
   GtkWidget *widget;
   const gchar *iap_name;
   gchar *type = NULL;
@@ -561,8 +551,9 @@ iap_wizard_name_and_type_page_next(struct iap_wizard *iw, gboolean show_note)
 }
 
 static void
-iap_wizard_name_and_type_page_finish(struct iap_wizard *iw)
+iap_wizard_name_and_type_page_finish(gpointer private)
 {
+  struct iap_wizard *iw = private;
   GSList *l;
   GSList *widget_list = NULL;
   const gchar *type = NULL;

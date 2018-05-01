@@ -2,8 +2,19 @@
 #define WIZARD_H
 
 struct iap_wizard;
-struct iap_wizard_page;
 
+struct iap_wizard_page
+{
+  gchar *id;
+  gchar *msgid;
+  GtkWidget * (*create)(gpointer private);
+  const char * (*get_page)(gpointer private, gboolean show_note);
+  void (*finish)(gpointer private);
+  void (*prev)(gpointer private);
+  gchar *next_page;
+  gchar *unk2;
+  gpointer priv;
+};
 struct iap_wizard_plugin
 {
   const gchar *name;
