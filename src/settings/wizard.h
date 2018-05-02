@@ -34,7 +34,7 @@ struct iap_wizard_plugin
 
 struct iap_wizard
 {
-  gpointer user_data;
+  osso_context_t *osso;
   GtkWidget *dialog;
   GtkWidget *button_next;
   GtkWidget *button_finish;
@@ -88,7 +88,7 @@ GtkWidget *iap_wizard_export(struct iap_wizard *iw, struct stage *s, gboolean re
 void iap_wizard_save_state(struct iap_wizard *iw, GByteArray *state);
 gboolean iap_wizard_restore_state(struct iap_wizard *iw, struct stage_cache *data);
 
-struct iap_wizard *iap_wizard_create(gpointer user_data, GtkWindow *parent);
+struct iap_wizard *iap_wizard_create(osso_context_t *osso, GtkWindow *parent);
 void iap_wizard_show(struct iap_wizard *iw);
 void iap_wizard_destroy(struct iap_wizard *iw);
 void iap_wizard_import(struct iap_wizard *iw, struct stage *s);

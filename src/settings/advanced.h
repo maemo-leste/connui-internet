@@ -26,7 +26,7 @@ struct iap_advanced_page
 
 struct iap_wizard_advanced
 {
-  gpointer user_data;
+  osso_context_t *osso;
   GtkWidget *dialog;
   gint current_page;
   GtkNotebook *notebook;
@@ -37,7 +37,7 @@ struct iap_wizard_advanced
   struct stage *stage;
 };
 
-struct iap_wizard_advanced *iap_advanced_create(gpointer user_data, GtkWindow *parent, struct iap_advanced_page *pages, struct stage_widget *sw, struct stage *s);
+struct iap_wizard_advanced *iap_advanced_create(osso_context_t *osso, GtkWindow *parent, struct iap_advanced_page *pages, struct stage_widget *sw, struct stage *s);
 void iap_advanced_show(struct iap_wizard_advanced *adv);
 void iap_advanced_destroy(struct iap_wizard_advanced *adv);
 

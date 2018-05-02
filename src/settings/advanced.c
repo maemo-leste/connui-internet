@@ -716,7 +716,7 @@ iap_advanced_host_insert_text_cb(GtkEditable *editable, gchar *new_text,
 }
 
 struct iap_wizard_advanced *
-iap_advanced_create(gpointer user_data, GtkWindow *parent,
+iap_advanced_create(osso_context_t *osso, GtkWindow *parent,
                     struct iap_advanced_page *pages, struct stage_widget *sw,
                     struct stage *s)
 {
@@ -732,7 +732,7 @@ iap_advanced_create(gpointer user_data, GtkWindow *parent,
   if (parent)
     flags |= (GTK_DIALOG_DESTROY_WITH_PARENT | GTK_DIALOG_MODAL);
 
-  adv->user_data = user_data;
+  adv->osso = osso;
   adv->stage = s;
   adv->sw = sw;
   adv->widgets = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);

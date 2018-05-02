@@ -787,8 +787,7 @@ iap_wizard_dialog_activate_advanced_settings(struct iap_wizard *iw)
     }
   }
 
-  iw->advanced = iap_advanced_create(iw->user_data,
-                                     GTK_WINDOW(iw->dialog),
+  iw->advanced = iap_advanced_create(iw->osso, GTK_WINDOW(iw->dialog),
                                      pages, iw->stage_widgets, iw->stage);
 
   iap_advanced_import(iw->advanced, iw->stage);
@@ -863,14 +862,14 @@ iap_wizard_dialog_response_cb(GtkDialog *dialog, gint response_id,
 }
 
 struct iap_wizard *
-iap_wizard_create(gpointer user_data, GtkWindow *parent)
+iap_wizard_create(osso_context_t *osso, GtkWindow *parent)
 {
   struct iap_wizard *iw = g_new0(struct iap_wizard, 1);
   GtkDialogFlags dialog_flags = GTK_DIALOG_NO_SEPARATOR;
   struct iap_wizard_page *page;
   GtkDialog *dialog;
 
-  iw->user_data = user_data;
+  iw->osso = osso;
   iw->pages = g_hash_table_new(g_str_hash, g_str_equal);
   iw->widgets = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 
