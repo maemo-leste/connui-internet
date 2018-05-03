@@ -1,3 +1,9 @@
+connui-internet (2.78) fremantle; urgency=low
+
+  * add iapsettings devel package
+
+ -- Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>  Thu, 03 May 2018 13:47:42 +0300
+
 connui-internet (2.77.1) fremantle; urgency=low
 
   * applet: enable osso log macro compilation
