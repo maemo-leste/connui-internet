@@ -15,6 +15,7 @@ AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER(config.h)
 AC_CONFIG_FILES([
 	Makefile
+	connui-iapsettings.pc
 	src/Makefile
 	src/status-menu-item/Makefile
 	src/settings/Makefile

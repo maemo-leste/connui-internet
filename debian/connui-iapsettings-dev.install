@@ -1,0 +1,3 @@
+usr/lib/libconnui_iapsettings.so
+usr/include/connui/iapsettings
+usr/lib/pkgconfig/connui-iapsettings.pc

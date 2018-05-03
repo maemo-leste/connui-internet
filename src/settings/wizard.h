@@ -15,6 +15,7 @@ struct iap_wizard_page
   gchar *unk2;
   gpointer priv;
 };
+
 struct iap_wizard_plugin
 {
   const gchar *name;

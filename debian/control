@@ -64,3 +64,15 @@ Description: Internet Settings UI for Hildon Control Panel
  IAP
  .
  This package contains the debug symbols.
+
+Package: connui-iapsettings-dev
+Architecture: any
+Section: libdevel
+Depends: ${misc:Depends}, connui-iapsettings (= ${binary:Version})
+Description: Internet Settings UI for Hildon Control Panel
+ This package provides the Internet Settings UI that allows you to create,
+ edit and delete Internet Access Point configurations. It also allows you
+ to tune some generic ICd parameters like connection timeouts and preferred
+ IAP
+ .
+ This package contains the development files for connui-iapsettings.
