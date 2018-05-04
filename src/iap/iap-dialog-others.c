@@ -4,7 +4,7 @@
 #include <connui/connui-conndlgs.h>
 #include <connui/connui-log.h>
 #include <connui/connui-dbus.h>
-#include <conbtui/gateway-settings.h>
+#include <conbtui/gateway/settings.h>
 
 #include <libintl.h>
 #include <string.h>

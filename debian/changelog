@@ -1,3 +1,9 @@
+connui-internet (2.78.1) fremantle; urgency=low
+
+  * port to conbtui 2.88.10
+
+ -- Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>  Fri, 04 May 2018 17:12:34 +0300
+
 connui-internet (2.78) fremantle; urgency=low
 
   * add iapsettings devel package
