@@ -788,7 +788,7 @@ iap_advanced_create(osso_context_t *osso, GtkWindow *parent,
 
       while (widget->id)
       {
-        if (!widget->init || widget->init(adv->stage))
+        if (!widget->init || widget->init(adv->stage, widget->id, NULL))
         {
           GtkWidget *w = widget->create();
           GtkWidget *caption;

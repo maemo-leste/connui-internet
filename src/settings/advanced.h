@@ -5,7 +5,7 @@
 
 struct iap_advanced_widget
 {
-  gboolean (*init)(struct stage *);
+  gboolean (*init)(const struct stage *, const gchar *name, const gchar *key);
   gchar *id;
   gchar *proxy_id;
   gchar *auto_proxy_id;
