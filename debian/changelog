@@ -1,3 +1,9 @@
+connui-internet (2.78.2) fremantle; urgency=low
+
+  * fix iap_advanced_widget::init signature
+
+ -- Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>  Sun, 06 May 2018 08:48:51 +0300
+
 connui-internet (2.78.1) fremantle; urgency=low
 
   * port to conbtui 2.88.10
