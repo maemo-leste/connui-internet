@@ -85,12 +85,12 @@ static struct stage_implementation stage_impl_cache = {
 void
 stage_create_cache(struct stage *cache, const struct stage *s)
 {
-  GError *error;
-
   memset(cache, 0, sizeof(*cache));
 
   if (s)
   {
+    GError *error = NULL;
+
     cache->name = g_strdup(s->name);
     cache->dir = g_strdup(s->dir);
     cache->gconf = (GConfClient *)g_object_ref(s->gconf);
