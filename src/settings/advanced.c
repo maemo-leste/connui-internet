@@ -62,7 +62,7 @@ static struct iap_advanced_widget iap_advanced_wizard_proxies_widgets[] =
     NULL,
     "conn_set_iap_fi_adv_useproxies",
     gtk_check_button_new,
-    1
+    TRUE
   },
   {
     NULL,
@@ -71,7 +71,7 @@ static struct iap_advanced_widget iap_advanced_wizard_proxies_widgets[] =
     "IPV4_AUTO_PROXY",
     "conn_set_iap_fi_adv_proxies_http",
     iap_advanced_gtk_entry_full_new,
-    0
+    FALSE
   },
   {
     NULL,
@@ -80,7 +80,7 @@ static struct iap_advanced_widget iap_advanced_wizard_proxies_widgets[] =
     "IPV4_AUTO_PROXY",
     "conn_set_iap_fi_adv_proxies_port",
     iap_advanced_hildon_number_editor_new,
-    0
+    FALSE
   },
   {
     NULL,
@@ -89,7 +89,7 @@ static struct iap_advanced_widget iap_advanced_wizard_proxies_widgets[] =
     "IPV4_AUTO_PROXY",
     "conn_set_iap_fi_adv_proxies_https",
     iap_advanced_gtk_entry_full_new,
-    0
+    FALSE
   },
   {
     NULL,
@@ -98,7 +98,7 @@ static struct iap_advanced_widget iap_advanced_wizard_proxies_widgets[] =
     "IPV4_AUTO_PROXY",
     "conn_set_iap_fi_adv_proxies_port",
     iap_advanced_hildon_number_editor_new,
-    0
+    FALSE
   },
   {
     NULL,
@@ -107,7 +107,7 @@ static struct iap_advanced_widget iap_advanced_wizard_proxies_widgets[] =
     "IPV4_AUTO_PROXY",
     "conn_set_iap_fi_adv_proxies_ftp",
     iap_advanced_gtk_entry_full_new,
-    0
+    FALSE
   },
   {
     NULL,
@@ -116,7 +116,7 @@ static struct iap_advanced_widget iap_advanced_wizard_proxies_widgets[] =
     "IPV4_AUTO_PROXY",
     "conn_set_iap_fi_adv_proxies_port",
     iap_advanced_hildon_number_editor_new,
-    0
+    FALSE
   },
   {
     NULL,
@@ -125,7 +125,7 @@ static struct iap_advanced_widget iap_advanced_wizard_proxies_widgets[] =
     "IPV4_AUTO_PROXY",
     "conn_set_iap_fi_adv_proxies_rtsp",
     iap_advanced_gtk_entry_full_new,
-    0
+    FALSE
   },
   {
     NULL,
@@ -134,7 +134,7 @@ static struct iap_advanced_widget iap_advanced_wizard_proxies_widgets[] =
     "IPV4_AUTO_PROXY",
     "conn_set_iap_fi_adv_proxies_port",
     iap_advanced_hildon_number_editor_new,
-    0
+    FALSE
   },
   {
     NULL,
@@ -143,7 +143,7 @@ static struct iap_advanced_widget iap_advanced_wizard_proxies_widgets[] =
     "IPV4_AUTO_PROXY",
     "conn_set_iap_fi_adv_noproxyfor",
     iap_advanced_gtk_entry_full_new,
-    0
+    FALSE
   },
   {
     NULL,
@@ -152,7 +152,7 @@ static struct iap_advanced_widget iap_advanced_wizard_proxies_widgets[] =
     NULL,
     "conn_set_iap_fi_adv_use_autom",
     gtk_check_button_new,
-    1
+    TRUE
   },
   {
     NULL,
@@ -161,7 +161,7 @@ static struct iap_advanced_widget iap_advanced_wizard_proxies_widgets[] =
     NULL,
     "conn_set_iap_fi_adv_autom_url",
     iap_advanced_gtk_entry_full_new,
-    0
+    FALSE
   },
   { NULL, NULL, NULL, NULL, NULL, NULL, 0 }
 };
@@ -320,11 +320,11 @@ iap_advanced_check_proxies(struct iap_wizard_advanced *adv)
   }
   else
   {
-    const char *host = advanced_ipv4_hosts[0];
+    const char **host = advanced_ipv4_hosts;
 
-    while (host)
+    while (*host)
     {
-      gpointer widget = g_hash_table_lookup(adv->widgets, host);
+      gpointer widget = g_hash_table_lookup(adv->widgets, *host);
 
       if (widget && !iap_advanced_host_changed_cb(GTK_WIDGET(widget), adv))
         break;
@@ -590,7 +590,7 @@ iap_advanced_dialog_response_cb(GtkDialog *dialog, gint response_id,
   {
     int i = 0;
 
-    while(advanced_ipv4_entries[i])
+    while (advanced_ipv4_entries[i])
     {
       gpointer toggle = g_hash_table_lookup(adv->widgets, advanced_ipv4_toggles[i]);
       gpointer entry = g_hash_table_lookup(adv->widgets, advanced_ipv4_entries[i]);
