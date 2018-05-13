@@ -1257,7 +1257,7 @@ static const struct
   {"ipv4_address", "0.0.0.0"},
   {"ipv4_netmask", "0.0.0.0"},
   {"ipv4_gateway", "0.0.0.0"},
-  {"ipv4_autodns", GINT_TO_POINTER(-1)},
+  {"ipv4_autodns", GUINT_TO_POINTER(-1)},
   {"ipv4_dns1", "0.0.0.0"},
   {"ipv4_dns2", "0.0.0.0"},
   {"proxytype", "NONE"}
@@ -1298,14 +1298,14 @@ iap_wizard_set_active_stage(struct iap_wizard *iw, struct stage *new_stage)
       {
         const char *id = stage_defaults[i].id;
 
-        if (id == GINT_TO_POINTER(-2))
-          stage_set_bool(iw->stage, key, 0);
-        else if (id == GINT_TO_POINTER(-1))
+        if (id == GUINT_TO_POINTER(-2))
+          stage_set_bool(iw->stage, key, FALSE);
+        else if (id == GUINT_TO_POINTER(-1))
           stage_set_bool(iw->stage, key, TRUE);
-        else if (GPOINTER_TO_INT(id) > 255)
+        else if (GPOINTER_TO_UINT(id) > 255)
           stage_set_string(iw->stage, key, id);
         else
-          stage_set_int(iw->stage, key, GPOINTER_TO_INT(id));
+          stage_set_int(iw->stage, key, GPOINTER_TO_UINT(id));
       }
       else
         gconf_value_free(val);

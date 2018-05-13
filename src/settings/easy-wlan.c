@@ -507,7 +507,7 @@ static struct stage_widget iap_easy_wlan_wpa_eap_tls_auth_widgets[] =
     "EAP_TLS_PEAP_client_certificate_file",
     NULL,
     &mapper_combo2string,
-    GINT_TO_POINTER(1)
+    GUINT_TO_POINTER(1)
   },
   { NULL, NULL, NULL, NULL, NULL, NULL, NULL }
 };
@@ -523,7 +523,7 @@ static struct stage_widget iap_easy_wlan_wpa_eap_ttls_auth_widgets[] =
     "EAP_TLS_PEAP_client_certificate_file",
     NULL,
     &mapper_combo2string,
-    GINT_TO_POINTER(1)
+    GUINT_TO_POINTER(1)
   },
   {
     NULL,

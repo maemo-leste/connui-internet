@@ -301,14 +301,14 @@ int2combo(const struct stage *s, GtkWidget *entry,
   gint ival = stage_get_int(s, sw->key);
   gint *priv = (gint *)sw->priv;
 
-  if (GPOINTER_TO_INT(priv) <= 16)
+  if (GPOINTER_TO_UINT(priv) <= 16)
   {
     if (priv)
     {
       struct int2combo_foreach_data data;
 
       data.ival = ival;
-      data.col = GPOINTER_TO_INT(priv);
+      data.col = GPOINTER_TO_UINT(priv);
       data.widget = entry;
       set_active(entry, 0);
       gtk_tree_model_foreach(get_model(entry), int2combo_foreach_fn, &data);
@@ -345,7 +345,7 @@ combo2int(struct stage *s, const GtkWidget *entry,
   const gint *priv = sw->priv;
   int ival = -1;
 
-  if (GPOINTER_TO_INT(priv) > 16)
+  if (GPOINTER_TO_UINT(priv) > 16)
     ival = priv[get_active(entry)];
   else
   {
@@ -397,14 +397,14 @@ string2combo(const struct stage *s, GtkWidget *entry,
   gchar *str = stage_get_string(s, sw->key);
   const gchar **strlist = (const gchar **)sw->priv;
 
-  if (GPOINTER_TO_INT(sw->priv) < 16)
+  if (GPOINTER_TO_UINT(sw->priv) < 16)
   {
     if (str)
     {
       struct string2combo_foreach_data data;
 
       data.str = str;
-      data.col = GPOINTER_TO_INT(sw->priv);
+      data.col = GPOINTER_TO_UINT(sw->priv);
       data.widget = entry;
 
       gtk_tree_model_foreach(get_model(entry), string2combo_foreach_fn, &data);
@@ -439,7 +439,7 @@ combo2string(struct stage *s, const GtkWidget *entry,
   gchar *str = NULL;
   GtkTreeIter iter;
 
-  if (GPOINTER_TO_INT(sw->priv) > 15)
+  if (GPOINTER_TO_UINT(sw->priv) > 15)
   {
     gint active = get_active(entry);
 
@@ -643,7 +643,7 @@ mapper_export_widgets(struct stage *s, struct stage_widget *sw,
       else
       {
         sw->mapper->widget2stage(s, widget, sw);
-        g_hash_table_insert(hash, (gpointer)sw->key, GINT_TO_POINTER(TRUE));
+        g_hash_table_insert(hash, (gpointer)sw->key, GUINT_TO_POINTER(TRUE));
       }
     }
 
