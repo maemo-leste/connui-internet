@@ -1,3 +1,9 @@
+connui-internet (2.78.4) fremantle; urgency=low
+
+  * use unsigned integers when converting/checking from/to pointers
+
+ -- Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>  Mon, 14 May 2018 19:07:12 +0300
+
 connui-internet (2.78.3) fremantle; urgency=low
 
   * iap_advanced_check_proxies: advanced_ipv4_hosts is array of char *,
