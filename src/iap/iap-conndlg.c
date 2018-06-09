@@ -284,15 +284,14 @@ iap_conndlg_activate_iap_connection(GtkTreeModel *model, GtkTreeIter *iter,
               !strncmp(scan_entry->network.network_type, "WLAN_", 5))
           {
             dbus_uint32_t cap = 0;
-            dbus_uint32_t wlancond_capability =
-                nwattr2cap(scan_entry->network.network_attributes, &cap);
+
+            nwattr2cap(scan_entry->network.network_attributes, &cap);
 
             chosen_network_id = iap_run_easy_wlan_dialogs(
                   (*iap_conndlg)->libosso, GTK_WINDOW((*iap_conndlg)->dialog),
-                  scan_entry->network.network_id, &wlancond_capability);
+                  scan_entry->network.network_id, &cap);
 
-            cap2nwattr(wlancond_capability,
-                       &scan_entry->network.network_attributes);
+            cap2nwattr(cap, &scan_entry->network.network_attributes);
           }
           else if (!strncmp(scan_entry->network.network_type, "GPRS", 4))
           {
