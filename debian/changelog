@@ -1,3 +1,9 @@
+connui-internet (2.78.5) fremantle; urgency=low
+
+  * iap: conndlg: fix wlancond caps passed to iap_run_easy_wlan_dialogs
+
+ -- Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>  Sat, 09 Jun 2018 16:43:52 +0300
+
 connui-internet (2.78.4) fremantle; urgency=low
 
   * use unsigned integers when converting/checking from/to pointers
