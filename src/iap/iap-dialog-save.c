@@ -3,7 +3,7 @@
 #include <connui/connui-log.h>
 #include <connui/connui-dbus.h>
 
-IAP_DIALOGS_PLUGIN_DEFINE(save, ICD_UI_SHOW_DISCONNDLG_REQ)
+IAP_DIALOGS_PLUGIN_DEFINE(save, ICD_UI_SHOW_SAVEDLG_REQ)
 
 struct dialog_data
 {
