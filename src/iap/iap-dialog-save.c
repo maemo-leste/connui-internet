@@ -41,7 +41,7 @@ iap_dialog_save_send_reply(const gchar *saved_name)
     }
 
     if (!dbus_message_append_args(reply,
-                                  DBUS_TYPE_STRING, data->iap_name,
+                                  DBUS_TYPE_STRING, &(data->iap_name),
                                   DBUS_TYPE_STRING, &saved_name,
                                   DBUS_TYPE_INVALID))
     {
