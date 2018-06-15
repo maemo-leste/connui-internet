@@ -1,3 +1,9 @@
+connui-internet (2.78.7) fremantle; urgency=low
+
+  * iap: iap-dialog-save: Fix segfault when sending dbus reply
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Fri, 15 Jun 2018 11:23:00 +0300
+
 connui-internet (2.78.6) fremantle; urgency=low
 
   * iap: iap-dialog-save: Use correct signal signature for iap save dialog
