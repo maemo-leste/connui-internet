@@ -170,15 +170,9 @@ iap_easy_wlan_wpa_eap_ttls_auth_add_widgets_cb(GtkWidget *vbox,
   {
     const gchar *eap_peap;
     GConfClient *gconf = gconf_client_get_default();
-    gboolean pap_enabled =
-        gconf_client_get_bool(gconf, ICD_GCONF_SETTINGS "/ui/pap_enabled",
-                              FALSE);
     g_object_unref(gconf);
 
-    if (pap_enabled)
-      eap_peap = "EAP PAP";
-    else
-      eap_peap = NULL;
+    eap_peap = "EAP PAP";
 
     method_button = iap_widgets_create_static_picker_button(
           _("conn_set_iap_fi_wlan_ttls_meth"),
