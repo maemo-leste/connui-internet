@@ -1,3 +1,9 @@
+connui-internet (2.78.8) fremantle; urgency=low
+
+  * easy-wlan: always enable eap pap
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Tue, 19 Jun 2018 13:00:00 +0200
+
 connui-internet (2.78.7) fremantle; urgency=low
 
   * iap: iap-dialog-save: Fix segfault when sending dbus reply
