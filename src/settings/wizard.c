@@ -696,42 +696,29 @@ iap_wizzard_notebook_switch_page_cb(GtkNotebook *notebook, gpointer arg1,
   GtkDialog *dialog = GTK_DIALOG(iw->dialog);
   gchar *id = iw->page_ids[idx];
 
-  if (gtk_notebook_get_current_page(notebook) != -1)
+  struct iap_wizard_page *page =
+      (struct iap_wizard_page *)g_hash_table_lookup(iw->pages, id);
+
+  if (page)
   {
-    struct iap_wizard_page *page =
-        (struct iap_wizard_page *)g_hash_table_lookup(iw->pages, id);
+    gboolean sens;
 
-    if (page)
-    {
-      gboolean sensitive;
+    gtk_window_set_title(GTK_WINDOW(dialog), dgettext("osso-connectivity-ui",
+                                                      page->msgid));
+    sens = strcmp(id, "WELCOME") && strcmp(id, "NAME_AND_TYPE");
 
-      gtk_window_set_title(GTK_WINDOW(dialog), dgettext("osso-connectivity-ui",
-                                                        page->msgid));
-      sensitive = strcmp(id, "WELCOME");
+    gtk_dialog_set_response_sensitive(dialog, WIZARD_BUTTON_PREVIOUS, sens);
 
-      if (sensitive)
-        sensitive = strcmp(id, "NAME_AND_TYPE");
+    sens = !g_str_has_suffix(id, "COMPLETE") && (page->get_page ||
+                                                 page->next_page);
 
-      gtk_dialog_set_response_sensitive(dialog, WIZARD_BUTTON_PREVIOUS,
-                                        sensitive);
+    gtk_dialog_set_response_sensitive(dialog, WIZARD_BUTTON_NEXT, sens);
 
-      if (g_str_has_suffix(id, "COMPLETE"))
-        sensitive = FALSE;
-      else if (page->get_page)
-        sensitive = TRUE;
-      else if (page->next_page)
-        sensitive = TRUE;
-      else
-        sensitive = FALSE;
-
-      gtk_dialog_set_response_sensitive(dialog, WIZARD_BUTTON_NEXT, sensitive);
-
-      if (page->finish)
-        page->finish(page->priv);
-    }
-    else
-      DLOG_ERR("Unable to find page %s!", id);
+    if (page->finish)
+      page->finish(page->priv);
   }
+  else
+    DLOG_ERR("Unable to find page %s!", id);
 }
 
 static void
