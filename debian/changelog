@@ -1,3 +1,10 @@
+connui-internet (2.78.9) fremantle; urgency=low
+
+  * Fix https://github.com/maemo-leste/bugtracker/issues/168 - Network
+    connection wizard allows going to the 'previous' page on the first page
+
+ -- Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>  Sun, 09 Dec 2018 13:20:54 +0200
+
 connui-internet (2.78.8) fremantle; urgency=low
 
   * easy-wlan: always enable eap pap
