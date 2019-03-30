@@ -1,3 +1,9 @@
+connui-internet (2.78.10) unstable; urgency=medium
+
+  * Port to debhelper 10.
+
+ -- Ivan J. <parazyd@dyne.org>  Sat, 30 Mar 2019 13:11:14 +0100
+
 connui-internet (2.78.9) fremantle; urgency=low
 
   * Fix https://github.com/maemo-leste/bugtracker/issues/168 - Network
