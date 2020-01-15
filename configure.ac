@@ -75,7 +75,11 @@ AC_DEFINE_UNQUOTED(GETTEXT_PACKAGE, "${GETTEXT_PACKAGE}", [gettext package])
 
 dnl Installation directories
 
-conndlgslibdir=$libdir/conndlgs
+iapsettingslibdir=$libdir/iapsettings
+AC_SUBST(iapsettingslibdir)
+
+
+conndlgslibdir="`$PKG_CONFIG --variable=pluginlibdir connui`"
 AC_SUBST(conndlgslibdir)
 
 hildondesktoplibdir="`$PKG_CONFIG --variable=hildondesktoplibdir osso-af-settings`"

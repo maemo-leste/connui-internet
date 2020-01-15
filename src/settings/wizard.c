@@ -178,7 +178,7 @@ static void
 iap_wizard_load_plugins(struct iap_wizard *iw)
 {
   gboolean (*plugin_init)(struct iap_wizard *, struct iap_wizard_plugin *);
-  GDir *dir = g_dir_open("/usr/lib/iapsettings", 0, NULL);
+  GDir *dir = g_dir_open(IAPSETTINGS_PLUGIN_DIR, 0, NULL);
   GSList *l;
   const gchar *module_name;
 
@@ -190,7 +190,7 @@ iap_wizard_load_plugins(struct iap_wizard *iw)
   while ((module_name = g_dir_read_name(dir)))
   {
     gchar *module_path =
-        g_module_build_path("/usr/lib/iapsettings", module_name);
+        g_module_build_path(IAPSETTINGS_PLUGIN_DIR, module_name);
     GModule *module = g_module_open(module_path, G_MODULE_BIND_LOCAL);
 
     DLOG_INFO("Opening module %s: %p", module_path, module);

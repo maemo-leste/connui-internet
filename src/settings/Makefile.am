@@ -1,6 +1,7 @@
 AM_CFLAGS = -Wall -Werror $(LIBHILDON_CFLAGS) $(CONNUI_CFLAGS) \
 	    $(MAEMOSEC_CFLAGS) $(GMODULE_CFLAGS) \
-	    -DG_LOG_DOMAIN=\"$(PACKAGE)\" -DOSSOLOG_COMPILE=1
+	    -DG_LOG_DOMAIN=\"$(PACKAGE)\" -DOSSOLOG_COMPILE=1 \
+	    -DIAPSETTINGS_PLUGIN_DIR=\"$(iapsettingslibdir)\"
 AM_LDFLAGS = $(LIBHILDON_LIBS) $(CONNUI_LIBS)
 
 lib_LTLIBRARIES = libconnui_iapsettings.la
@@ -25,5 +26,3 @@ connui_iapsettingsinclude_HEADERS = widgets.h \
 				    mapper.h
 
 connui_iapsettingsincludedir = $(includedir)/connui/iapsettings
-
-
