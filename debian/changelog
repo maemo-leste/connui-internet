@@ -1,3 +1,11 @@
+connui-internet (2.78.11) unstable; urgency=low
+
+  * Use arch specific iapsettings plugin directory. Add pkgconfig variable
+    for iapsettings dirs to be used when building other packages.
+  * Build with -Wl,--as-needed to avoid useless dependenies
+
+ -- Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>  Wed, 15 Jan 2019 09:44:33 +0200
+
 connui-internet (2.78.10) unstable; urgency=medium
 
   * Port to debhelper 10.
