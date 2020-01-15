@@ -9,7 +9,8 @@ connui_internet_status_menu_item_la_CFLAGS = \
 connui_internet_status_menu_item_la_LIBADD = \
 	$(LIBHILDON_LIBS) $(CONNUI_LIBS)
 
-connui_internet_status_menu_item_la_LDFLAGS = -module -avoid-version
+connui_internet_status_menu_item_la_LDFLAGS = -module -avoid-version \
+	-Wl,--as-needed
 
 AM_CFLAGS = -Wall -Werror -DG_LOG_DOMAIN=\"$(PACKAGE)\"
 

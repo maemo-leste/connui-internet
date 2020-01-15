@@ -6,8 +6,8 @@ bin_PROGRAMS = iapsettings-restart-connection
 iapsettings_restart_connection_SOURCES = restart-connection.c
 iapsettings_restart_connection_CFLAGS = $(CONNUI_CFLAGS) $(ICD_CFLAGS) \
 					-DOSSOLOG_COMPILE=1
-
 iapsettings_restart_connection_LDADD = $(CONNUI_LIBS) $(ICD_LIBS)
+iapsettings_restart_connection_LDFLAGS = -Wl,--as-needed
 
 hildonpluginlib_LTLIBRARIES = libinternetsettings.la
 
@@ -18,7 +18,8 @@ libinternetsettings_la_CFLAGS = $(HILDON_CFLAGS) $(CONNUI_CFLAGS) $(AM_CFLAGS) \
 libinternetsettings_la_LIBADD = $(HILDON_LIBS) $(CONNUI_LIBS) \
 				$(top_builddir)/src/settings/libconnui_iapsettings.la
 
-libinternetsettings_la_LDFLAGS = -module -avoid-version -Wl,--no-undefined
+libinternetsettings_la_LDFLAGS = -module -avoid-version -Wl,--no-undefined \
+				 -Wl,--as-needed
 
 hildoncpdesktopentry_DATA = osso-connectivity-ui-iapsettings.desktop
 EXTRA_DIST = $(hildoncpdesktopentrydir_DATA)
