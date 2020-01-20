@@ -1,3 +1,9 @@
+connui-internet (2.78.12) unstable; urgency=low
+
+  * Fix conndlgs plugin names
+
+ -- Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>  Mon, 20 Jan 2020 18:44:12 +0200
+
 connui-internet (2.78.11) unstable; urgency=low
 
   * Use arch specific iapsettings plugin directory. Add pkgconfig variable
