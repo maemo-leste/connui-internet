@@ -1,3 +1,9 @@
+connui-internet (2.78.13) unstable; urgency=low
+
+  * Make build multiarch aware
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Fri, 24 Jan 2020 13:46:44 +0100
+
 connui-internet (2.78.12) unstable; urgency=low
 
   * Fix conndlgs plugin names
