@@ -1,3 +1,9 @@
+connui-internet (2.78.14) unstable; urgency=low
+
+  * Fix UI being disabled during first scan
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Fri, 17 Apr 2020 19:00:40 +0200
+
 connui-internet (2.78.13) unstable; urgency=low
 
   * Make build multiarch aware
