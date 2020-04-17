@@ -134,6 +134,14 @@ show_no_conn_available(struct iap_conndlg_private **iap_conndlg)
     gtk_widget_show_all((*iap_conndlg)->no_conn);
     gtk_widget_set_sensitive(GTK_WIDGET((*iap_conndlg)->scan_box_view), FALSE);
     (*iap_conndlg)->ui_disabled = TRUE;
+  } else {
+    if ((*iap_conndlg)->no_conn)
+    {
+      gtk_widget_destroy((*iap_conndlg)->no_conn);
+      (*iap_conndlg)->no_conn = NULL;
+    }
+    gtk_widget_set_sensitive(GTK_WIDGET((*iap_conndlg)->scan_box_view), TRUE);
+    (*iap_conndlg)->ui_disabled = FALSE;
   }
 
   g_list_free(l);

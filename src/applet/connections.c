@@ -369,7 +369,7 @@ restart_connection(GtkDialog *dialog, gint response_id, gpointer user_data)
         if (!g_spawn_async(NULL, argv, NULL, G_SPAWN_SEARCH_PATH, 0, NULL, &pid,
                            &err))
         {
-          ULOG_DEBUG(err->message);
+          ULOG_DEBUG("%s", err->message);
           g_clear_error(&err);
         }
 
