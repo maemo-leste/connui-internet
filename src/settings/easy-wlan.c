@@ -18,6 +18,7 @@
 #include "easy-wlan.h"
 
 #define _(msgid) dgettext("osso-connectivity-ui", msgid)
+#define IS_EMPTY(str) (!(str) || !*(str))
 
 struct easy_wlan
 {
@@ -704,7 +705,7 @@ iap_run_easy_wlan_dialogs(osso_context_t *libosso, GtkWindow *parent,
   iap_security = iap_security_from_wlan_security(*wlancond_capability);
   memset(&ewlan, 0, sizeof(ewlan));
 
-  if (!network_id && !*network_id)
+  if (IS_EMPTY(network_id))
   {
     if (iap_hidden_ssid_dialog(parent, &hidden_ssid, wlancond_capability) ||
         !*wlancond_capability)
