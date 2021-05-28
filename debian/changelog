@@ -1,3 +1,10 @@
+connui-internet (2.78.15) unstable; urgency=low
+
+  * Fix "Enter SSID" dialog not being shown when trying to connect to hidden
+    WLAN
+
+ -- Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>  Fri, 28 May 2021 18:08:22 +0300
+
 connui-internet (2.78.14) unstable; urgency=low
 
   * Fix UI being disabled during first scan
