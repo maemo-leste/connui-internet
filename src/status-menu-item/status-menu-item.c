@@ -12,8 +12,17 @@
 
 #define _(x) dgettext(GETTEXT_PACKAGE, x)
 
-#define CONNUI_INTERNET_STATUS_MENU_ITEM_TYPE (connui_internet_status_menu_item_get_type())
-#define CONNUI_INTERNET_STATUS_MENU_ITEM(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), CONNUI_INTERNET_STATUS_MENU_ITEM_TYPE, ConnuiInternetStatusMenuItem))
+#define CONNUI_INTERNET_STATUS_MENU_ITEM_TYPE \
+  (connui_internet_status_menu_item_get_type())
+#define CONNUI_INTERNET_STATUS_MENU_ITEM(obj) \
+  (G_TYPE_CHECK_INSTANCE_CAST ((obj), \
+  CONNUI_INTERNET_STATUS_MENU_ITEM_TYPE, \
+  ConnuiInternetStatusMenuItem))
+
+#define GET_PRIVATE(item) \
+  ((ConnuiInternetStatusMenuItemPrivate *) \
+  connui_internet_status_menu_item_get_instance_private( \
+                                          (ConnuiInternetStatusMenuItem *)item))
 
 typedef struct _ConnuiInternetStatusMenuItem ConnuiInternetStatusMenuItem;
 typedef struct _ConnuiInternetStatusMenuItemClass ConnuiInternetStatusMenuItemClass;
@@ -22,7 +31,6 @@ typedef struct _ConnuiInternetStatusMenuItemPrivate ConnuiInternetStatusMenuItem
 struct _ConnuiInternetStatusMenuItem
 {
   HDStatusMenuItem parent;
-  ConnuiInternetStatusMenuItemPrivate *priv;
 };
 
 struct _ConnuiInternetStatusMenuItemClass
@@ -49,9 +57,9 @@ struct _ConnuiInternetStatusMenuItemPrivate
   struct timespec tp;
 };
 
-HD_DEFINE_PLUGIN_MODULE(ConnuiInternetStatusMenuItem,
-                        connui_internet_status_menu_item,
-                        HD_TYPE_STATUS_MENU_ITEM)
+HD_DEFINE_PLUGIN_MODULE_WITH_PRIVATE(ConnuiInternetStatusMenuItem,
+                                     connui_internet_status_menu_item,
+                                     HD_TYPE_STATUS_MENU_ITEM)
 
 static void
 connui_internet_status_menu_item_class_finalize(
@@ -164,11 +172,15 @@ connui_internet_status_menu_item_anim_set_pixbuf(gpointer user_data,
 static void
 connui_internet_status_menu_item_start_anim(ConnuiInternetStatusMenuItem *item)
 {
-  g_return_if_fail(item != NULL && item->priv != NULL);
+  ConnuiInternetStatusMenuItemPrivate *priv = GET_PRIVATE(item);
 
-  if (item->priv->pixbuf_anim && item->priv->display_state != OSSO_DISPLAY_OFF)
-    connui_pixbuf_anim_start(item->priv->pixbuf_anim, item,
+  g_return_if_fail(item != NULL && priv != NULL);
+
+  if (priv->pixbuf_anim && priv->display_state != OSSO_DISPLAY_OFF)
+  {
+    connui_pixbuf_anim_start(priv->pixbuf_anim, item,
                              connui_internet_status_menu_item_anim_set_pixbuf);
+  }
 }
 
 static gboolean
@@ -185,7 +197,7 @@ static void
 connui_internet_status_menu_item_set_active_conn_info(
     ConnuiInternetStatusMenuItem *self)
 {
-  ConnuiInternetStatusMenuItemPrivate *priv = self->priv;
+  ConnuiInternetStatusMenuItemPrivate *priv = GET_PRIVATE(self);
   gchar *button_icon_name;
   gchar *network_name;
   GdkPixbuf *button_icon;
@@ -196,7 +208,7 @@ connui_internet_status_menu_item_set_active_conn_info(
 
   if (priv->connection_state > 1 && priv->connection_state < 4)
   {
-    if (connui_internet_status_menu_item_is_suspended(self->priv))
+    if (connui_internet_status_menu_item_is_suspended(priv))
     {
       struct timespec tp;
 
@@ -303,7 +315,7 @@ connui_internet_status_menu_item_conn_strength_cb(
 {
   ConnuiInternetStatusMenuItem *self =
       CONNUI_INTERNET_STATUS_MENU_ITEM(user_data);
-  ConnuiInternetStatusMenuItemPrivate *priv = self->priv;
+  ConnuiInternetStatusMenuItemPrivate *priv = GET_PRIVATE(self);
 
   g_return_if_fail(priv != NULL && priv->conn_icon != NULL && stats != NULL);
 
@@ -318,7 +330,7 @@ static void
 connui_internet_status_menu_item_conn_strength_start(
     ConnuiInternetStatusMenuItem *self)
 {
-  ConnuiInternetStatusMenuItemPrivate *priv = self->priv;
+  ConnuiInternetStatusMenuItemPrivate *priv = GET_PRIVATE(self);
 
   if (priv->is_active && priv->is_displayed &&
       priv->display_state != OSSO_DISPLAY_OFF)
@@ -332,18 +344,22 @@ static void
 connui_internet_status_menu_item_conn_strength_stop(
     ConnuiInternetStatusMenuItem *self)
 {
+  ConnuiInternetStatusMenuItemPrivate *priv = GET_PRIVATE(self);
+
   connui_inetstate_statistics_stop(
         connui_internet_status_menu_item_conn_strength_cb);
-  self->priv->signal_strength = 0;
+  priv->signal_strength = 0;
 }
 
 static void
 connui_internet_status_menu_item_set_network(ConnuiInternetStatusMenuItem *self,
                                              network_entry *network)
 {
-  iap_network_entry_clear(self->priv->network);
-  g_free(self->priv->network);
-  self->priv->network = network;
+  ConnuiInternetStatusMenuItemPrivate *priv = GET_PRIVATE(self);
+
+  iap_network_entry_clear(priv->network);
+  g_free(priv->network);
+  priv->network = network;
   connui_internet_status_menu_item_set_active_conn_info(self);
 }
 
@@ -354,7 +370,7 @@ connui_internet_status_menu_item_inet_status_cb(enum inetstate_status state,
 {
   ConnuiInternetStatusMenuItem *self =
       CONNUI_INTERNET_STATUS_MENU_ITEM(user_data);
-  ConnuiInternetStatusMenuItemPrivate *priv = self->priv;
+  ConnuiInternetStatusMenuItemPrivate *priv = GET_PRIVATE(self);
   static enum inetstate_status old_state = 1;
 
   g_return_if_fail(priv != NULL);
@@ -427,7 +443,7 @@ connui_internet_status_menu_item_is_displayed(GtkWidget *widget,
 {
   ConnuiInternetStatusMenuItem *self =
       CONNUI_INTERNET_STATUS_MENU_ITEM(user_data);
-  ConnuiInternetStatusMenuItemPrivate *priv = self->priv;
+  ConnuiInternetStatusMenuItemPrivate *priv = GET_PRIVATE(self);
 
   priv->is_displayed = TRUE;
 
@@ -442,7 +458,7 @@ connui_internet_status_menu_item_is_not_displayed(GtkWidget *widget,
 
   ConnuiInternetStatusMenuItem *self =
       CONNUI_INTERNET_STATUS_MENU_ITEM(user_data);
-  ConnuiInternetStatusMenuItemPrivate *priv = self->priv;
+  ConnuiInternetStatusMenuItemPrivate *priv = GET_PRIVATE(self);
 
   priv->is_displayed = FALSE;
 
@@ -455,11 +471,9 @@ connui_internet_status_menu_item_parent_set_signal(GtkWidget *widget,
                                                    GtkObject *old_parent,
                                                    gpointer user_data)
 {
-  ConnuiInternetStatusMenuItem *self;
-  ConnuiInternetStatusMenuItemPrivate *priv;
-
-  self = CONNUI_INTERNET_STATUS_MENU_ITEM(user_data);
-  priv = self->priv;
+  ConnuiInternetStatusMenuItem *self =
+      CONNUI_INTERNET_STATUS_MENU_ITEM(user_data);
+  ConnuiInternetStatusMenuItemPrivate *priv = GET_PRIVATE(self);
 
   if (priv->signals_set)
   {
@@ -498,7 +512,7 @@ connui_internet_status_menu_item_cellular_data_suspended_status_cb(
 {
   ConnuiInternetStatusMenuItem *self =
       CONNUI_INTERNET_STATUS_MENU_ITEM(user_data);
-  ConnuiInternetStatusMenuItemPrivate *priv = self->priv;
+  ConnuiInternetStatusMenuItemPrivate *priv = GET_PRIVATE(self);
 
   g_return_if_fail(priv != NULL);
 
@@ -512,19 +526,20 @@ static void
 connui_internet_status_menu_item_display_cb(osso_display_state_t state,
                                             gpointer *user_data)
 {
-
   ConnuiInternetStatusMenuItem *item =
       CONNUI_INTERNET_STATUS_MENU_ITEM(user_data);
+  ConnuiInternetStatusMenuItemPrivate *priv = GET_PRIVATE(item);
 
-  g_return_if_fail(item != NULL && item->priv != NULL);
+  g_return_if_fail(item != NULL && priv != NULL);
 
-  item->priv->display_state = state;
+  priv->display_state = state;
 
   if (state == OSSO_DISPLAY_OFF)
   {
     connui_internet_status_menu_item_conn_strength_stop(item);
-    if (item->priv->pixbuf_anim)
-      connui_pixbuf_anim_stop(item->priv->pixbuf_anim);
+
+    if (priv->pixbuf_anim)
+      connui_pixbuf_anim_stop(priv->pixbuf_anim);
   }
   else if (state == OSSO_DISPLAY_ON)
   {
@@ -536,13 +551,12 @@ connui_internet_status_menu_item_display_cb(osso_display_state_t state,
 static void
 connui_internet_status_menu_item_finalize(GObject *self)
 {
-  ConnuiInternetStatusMenuItemPrivate *priv =
-      CONNUI_INTERNET_STATUS_MENU_ITEM(self)->priv;
+  ConnuiInternetStatusMenuItemPrivate *priv = GET_PRIVATE(self);
 
   if (priv->osso_context)
   {
     osso_deinitialize(priv->osso_context);
-    priv->osso_context = 0;
+    priv->osso_context = NULL;
   }
 
   connui_internet_status_menu_item_conn_strength_stop(
@@ -554,7 +568,7 @@ connui_internet_status_menu_item_finalize(GObject *self)
   if (priv->pixbuf_cache)
   {
     connui_pixbuf_cache_destroy(priv->pixbuf_cache);
-    priv->pixbuf_cache = 0;
+    priv->pixbuf_cache = NULL;
   }
 
   G_OBJECT_CLASS(connui_internet_status_menu_item_parent_class)->finalize(self);
@@ -565,18 +579,13 @@ connui_internet_status_menu_item_class_init(
     ConnuiInternetStatusMenuItemClass *klass)
 {
   G_OBJECT_CLASS(klass)->finalize = connui_internet_status_menu_item_finalize;
-  g_type_class_add_private(klass, sizeof(ConnuiInternetStatusMenuItemPrivate));
 }
 
 static void
 connui_internet_status_menu_item_init(ConnuiInternetStatusMenuItem *self)
 {
-  ConnuiInternetStatusMenuItemPrivate *priv =
-      G_TYPE_INSTANCE_GET_PRIVATE(self,
-                                  CONNUI_INTERNET_STATUS_MENU_ITEM_TYPE,
-                                  ConnuiInternetStatusMenuItemPrivate);
+  ConnuiInternetStatusMenuItemPrivate *priv = GET_PRIVATE(self);
 
-  self->priv = priv;
   priv->pixbuf_cache = connui_pixbuf_cache_new();
   priv->button = hildon_button_new(HILDON_SIZE_FINGER_HEIGHT,
                                    HILDON_BUTTON_ARRANGEMENT_VERTICAL);
@@ -590,9 +599,10 @@ connui_internet_status_menu_item_init(ConnuiInternetStatusMenuItem *self)
   hildon_button_set_title(HILDON_BUTTON(priv->button),
                           _("stab_me_internet_connection"));
   hildon_button_set_alignment(HILDON_BUTTON(priv->button), 0.0, 0.0, 1.0, 1.0);
-  g_signal_connect_data(G_OBJECT(priv->button), "clicked",
-                        (GCallback)connui_internet_status_menu_item_request_select_connection,
-                        self, NULL, G_CONNECT_AFTER);
+  g_signal_connect_after(
+        G_OBJECT(priv->button), "clicked",
+        (GCallback)connui_internet_status_menu_item_request_select_connection,
+        self);
 
    gtk_container_add(GTK_CONTAINER(self), priv->button);
    connui_internet_status_menu_item_set_active_conn_info(self);
