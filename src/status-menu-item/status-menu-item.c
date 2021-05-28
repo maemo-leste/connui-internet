@@ -45,7 +45,7 @@ struct _ConnuiInternetStatusMenuItemPrivate
   ConnuiPixbufCache *pixbuf_cache;
   ConnuiPixbufAnim *pixbuf_anim;
   network_entry *network;
-  int connection_state;
+  enum inetstate_status connection_state;
   gboolean is_active;
   gboolean is_displayed;
   gboolean signals_set;
@@ -206,7 +206,8 @@ connui_internet_status_menu_item_set_active_conn_info(
 
   g_return_if_fail(priv != NULL && priv->pixbuf_cache != NULL);
 
-  if (priv->connection_state > 1 && priv->connection_state < 4)
+  if (priv->connection_state == INETSTATE_STATUS_CONNECTING ||
+      priv->connection_state == INETSTATE_STATUS_CONNECTED)
   {
     if (connui_internet_status_menu_item_is_suspended(priv))
     {
@@ -260,7 +261,7 @@ connui_internet_status_menu_item_set_active_conn_info(
   {
     gchar *s = NULL;
 
-    if (priv->connection_state == 3)
+    if (priv->connection_state == INETSTATE_STATUS_CONNECTED)
     {
       if (connui_internet_status_menu_item_is_suspended(priv))
         s = g_strdup("general_packetdata_suspended");
@@ -269,7 +270,7 @@ connui_internet_status_menu_item_set_active_conn_info(
       if (s)
         status_area_icon = connui_pixbuf_cache_get(priv->pixbuf_cache, s, 16);
     }
-    else if (priv->connection_state == 2)
+    else if (priv->connection_state == INETSTATE_STATUS_CONNECTING)
     {
       gchar *dimmed;
 
@@ -371,7 +372,7 @@ connui_internet_status_menu_item_inet_status_cb(enum inetstate_status state,
   ConnuiInternetStatusMenuItem *self =
       CONNUI_INTERNET_STATUS_MENU_ITEM(user_data);
   ConnuiInternetStatusMenuItemPrivate *priv = GET_PRIVATE(self);
-  static enum inetstate_status old_state = 1;
+  static enum inetstate_status old_state = INETSTATE_STATUS_ONLINE;
 
   g_return_if_fail(priv != NULL);
 
@@ -418,13 +419,20 @@ connui_internet_status_menu_item_inet_status_cb(enum inetstate_status state,
   }
 
   if (old_state == INETSTATE_STATUS_OFFLINE && state != old_state)
-    hildon_banner_show_information(0, 0, _("conn_ib_normal_mode_activated"));
+  {
+    hildon_banner_show_information(NULL, NULL,
+                                   _("conn_ib_normal_mode_activated"));
+  }
 
   if (entry && entry->network_type &&
       (!strncmp(entry->network_type, "WLAN_", 5) ||
        !strncmp(entry->network_type, "WIMAX", 5)))
   {
-    priv->is_active = (state > 1 && state < 5);
+
+    priv->is_active =
+        state == INETSTATE_STATUS_CONNECTING ||
+        state == INETSTATE_STATUS_CONNECTED ||
+        state == INETSTATE_STATUS_DISCONNECTING;
 
     if (priv->is_active)
       connui_internet_status_menu_item_conn_strength_start(self);
@@ -432,7 +440,7 @@ connui_internet_status_menu_item_inet_status_cb(enum inetstate_status state,
       connui_internet_status_menu_item_conn_strength_stop(self);
   }
   else
-    priv->is_active = 0;
+    priv->is_active = FALSE;
 
   old_state = state;
 }
@@ -493,14 +501,12 @@ connui_internet_status_menu_item_parent_set_signal(GtkWidget *widget,
   widget = gtk_widget_get_ancestor(GTK_WIDGET(self), GTK_TYPE_WINDOW);
   if (widget)
   {
-    g_signal_connect_data(
+    g_signal_connect(
           G_OBJECT(widget), "map",
-          G_CALLBACK(connui_internet_status_menu_item_is_displayed), self, NULL,
-          0);
-    g_signal_connect_data(
+          G_CALLBACK(connui_internet_status_menu_item_is_displayed), self);
+    g_signal_connect(
           G_OBJECT(widget), "unmap",
-          G_CALLBACK(connui_internet_status_menu_item_is_not_displayed), self,
-          NULL, 0);
+          G_CALLBACK(connui_internet_status_menu_item_is_not_displayed), self);
 
     priv->signals_set = TRUE;
   }
@@ -628,7 +634,7 @@ connui_internet_status_menu_item_init(ConnuiInternetStatusMenuItem *self)
          self))
      ULOG_ERR("inet status: cannot receive cellular data suspended updates");
 
-   g_signal_connect_data(G_OBJECT(self), "parent-set",
-                         G_CALLBACK(connui_internet_status_menu_item_parent_set_signal),
-                         self, NULL, 0);
+   g_signal_connect(
+         G_OBJECT(self), "parent-set",
+         G_CALLBACK(connui_internet_status_menu_item_parent_set_signal), self);
 }
