@@ -611,7 +611,7 @@ connui_internet_status_menu_item_init(ConnuiInternetStatusMenuItem *self)
    priv->tp.tv_sec = 0;
    /* FIXME - get application and version from autoconf or debian packaging */
    priv->osso_context = osso_initialize("connui_internet_status_menu_item",
-                                        "2.71+0m5", 1, 0);;
+                                        PACKAGE_VERSION, TRUE, NULL);
    priv->tp.tv_nsec = 0;
 
    osso_hw_set_display_event_cb(
