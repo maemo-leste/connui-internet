@@ -207,7 +207,8 @@ iap_conndlg_display_event_cb(const char *status,
       if (!connui_inetstate_status(iap_conndlg_inetstate_cb, iap_conndlg))
         CONNUI_ERR("Unable to register inetstate callback");
 
-      if (GTK_WIDGET_VISIBLE((*iap_conndlg)->dialog))
+      if ((*iap_conndlg)->dialog &&
+          GTK_WIDGET_VISIBLE((*iap_conndlg)->dialog))
       {
         if (!iap_scan_start(1, scan_started, scan_stopped, NULL,
                             (*iap_conndlg)->scan_box_view,
