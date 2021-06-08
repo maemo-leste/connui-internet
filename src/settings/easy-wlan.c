@@ -17,6 +17,18 @@
 
 #include "easy-wlan.h"
 
+#define WPA_SUPP_SERVICE "fi.w1.wpa_supplicant1"
+#define WPA_SUPP_PATH "/fi/w1/wpa_supplicant1"
+#define WPA_SUPP_IFACE "fi.w1.wpa_supplicant1"
+
+#define WPA_SUPP_INTERFACE_IFACE WPA_SUPP_IFACE ".Interface"
+#define WPA_SUPP_INTERFACES_PATH WPA_SUPP_PATH "/Interfaces"
+#define WPA_SUPP_INTERFACES_PATH_0 WPA_SUPP_INTERFACES_PATH "/0"
+
+#define WPA_SUPP_INTERFACE_SCAN_DONE_SIG "ScanDone"
+#define WPA_SUPP_INTERFACE_BSS_ADDED_SIG "BSSAdded"
+#define WPA_SUPP_INTERFACE_SCAN_REQ "Scan"
+
 #define _(msgid) dgettext("osso-connectivity-ui", msgid)
 #define IS_EMPTY(str) (!(str) || !*(str))
 
@@ -32,15 +44,38 @@ struct easy_wlan
   gint min_width;
 };
 
-struct wlancond_info
+struct rsn
+{
+  gboolean wpa_psk : 1;
+  gboolean wpa_ft_psk : 1;
+  gboolean wpa_psk_sha256 : 1;
+  gboolean wpa_eap : 1;
+  gboolean wpa_ft_eap : 1;
+  gboolean wpa_eap_sha256 : 1;
+};
+
+struct wpa
+{
+  gboolean wpa_psk : 1;
+  gboolean wpa_eap : 1;
+};
+
+struct bss_info
+{
+  struct rsn rsn;
+  struct wpa wpa;
+  gboolean infrastructure : 1;
+  gboolean privacy : 1;
+};
+
+struct ssid_info
 {
   const gchar *ssid;
   guint cap_bits;
   gboolean scan_results_received;
   gboolean ssid_found;
-  guint wlancond_timeout_id;
+  guint supplicant_timeout_id;
 };
-
 
 static GtkWidget *
 iap_easy_wlan_get_widget(gpointer user_data, const gchar *id)
@@ -82,8 +117,7 @@ iap_easy_wlan_wpa_eap_leap_add_widgets_cb(GtkWidget *vbox,
                    G_CALLBACK(iap_easy_wlan_h22_entry_activate_cb),
                    ewlan->window);
 
-  /* FIXME 0x800000 */
-  if (!(ewlan->security & 0x800000))
+  if (!(ewlan->security & IAP_SECURITY_WPA_EAP_GTC))
   {
     entry = iap_widgets_create_h22_entry();
     im = hildon_gtk_entry_get_input_mode(GTK_ENTRY(entry));
@@ -106,8 +140,10 @@ iap_easy_wlan_wpa_eap_type_done_cb(struct easy_wlan *ewlan)
 {
   GtkWidget *eap_type;
   gint active;
-  /* not sure about those are the corerect defines, FIXME */
-  guint security[] = {0x10000000, 0x400000, 0x20000000};
+
+  guint security[] = {IAP_SECURITY_WPA_EAP_PEAP,
+                      IAP_SECURITY_WPA_EAP_TLS,
+                      IAP_SECURITY_WPA_EAP_TTLS};
 
   eap_type = iap_easy_wlan_get_widget(ewlan, "EAP_TYPE");
   active = hildon_picker_button_get_active(HILDON_PICKER_BUTTON(eap_type));
@@ -121,7 +157,10 @@ iap_easy_wlan_wpa_eap_ttls_auth_done_cb(struct easy_wlan *ewlan)
 {
   GtkWidget *eap_tunneled_type;
   gint active;
-  guint security[] = {0x800000, 0x1000000, 0x2000000, 0x8000000};
+  guint security[] = {IAP_SECURITY_WPA_EAP_GTC,
+                      IAP_SECURITY_WPA_EAP_MS,
+                      IAP_SECURITY_WPA_EAP_TTLS_MS,
+                      IAP_SECURITY_WPA_EAP_TTLS_PAP};
 
   eap_tunneled_type = iap_easy_wlan_get_widget(ewlan, "EAP_TUNNELED_TYPE");
   active =
@@ -167,7 +206,7 @@ iap_easy_wlan_wpa_eap_ttls_auth_add_widgets_cb(GtkWidget *vbox,
 
   gtk_box_pack_start(GTK_BOX(vbox), cert_picker, FALSE, FALSE, 0);
 
-  if (ewlan->security & 0x20000000)
+  if (ewlan->security & IAP_SECURITY_WPA_EAP_TTLS)
   {
     const gchar *eap_peap;
     GConfClient *gconf = gconf_client_get_default();
@@ -430,21 +469,21 @@ iap_security_from_wlan_security(guint wlancond_capability)
 {
   guint iap_security;
 
-  if (wlancond_capability & WLAN_CAP_ADHOCWLAN)
-    iap_security = 0x40;
+  if (wlancond_capability & WLANCOND_ADHOC)
+    iap_security = IAP_TYPE_ADHOC;
   else
-    iap_security = 0x80;
+    iap_security = IAP_TYPE_INFRA;
 
-  if (wlancond_capability & WLAN_CAP_SECURITY_WPA_EAP)
-    return ~((unsigned int)~(iap_security << 12) >> 12);
+  if (wlancond_capability & WLANCOND_WPA_EAP)
+    return iap_security | IAP_SECURITY_WPA_EAP_UNKNOWN;
 
-  if (wlancond_capability & WLAN_CAP_SECURITY_WPA_PSK)
-    return iap_security | 0x80000;
+  if (wlancond_capability & WLANCOND_WPA_PSK)
+    return iap_security | IAP_SECURITY_WPA_PSK;
 
-  if (wlancond_capability & WLAN_CAP_SECURITY_WEP)
-    return iap_security | 0x20000;
+  if (wlancond_capability & WLANCOND_WEP)
+    return iap_security | IAP_SECURITY_WEP;
 
-  return iap_security | 0x10000;
+  return iap_security | IAP_SECURITY_NONE;
 }
 
 static const gint eap_types[] = {254, 0, 55, 42, 0, 0, 0, 1, -1};
@@ -477,7 +516,7 @@ static struct stage_widget iap_easy_wlan_ent_wpa_psk_widgets[] =
   { NULL, NULL, NULL, NULL, NULL, NULL, NULL }
 };
 
-static gint EAP_default_type[] = {25, 13, 21, -1};
+static gint EAP_default_type[] = {EAP_PEAP, EAP_TLS, EAP_TTLS, -1};
 
 static struct stage_widget iap_easy_wlan_wpa_eap_type_widgets[] =
 {
@@ -507,7 +546,14 @@ static struct stage_widget iap_easy_wlan_wpa_eap_tls_auth_widgets[] =
   { NULL, NULL, NULL, NULL, NULL, NULL, NULL }
 };
 
-static gint PEAP_tunneled_eap_type[] = {6, 26, 99, 98, -1};
+static gint PEAP_tunneled_eap_type[] =
+{
+  EAP_GTC,
+  EAP_MS,
+  EAP_TTLS_MS,
+  EAP_TTLS_PAP,
+  -1
+};
 
 static struct stage_widget iap_easy_wlan_wpa_eap_ttls_auth_widgets[] =
 {
@@ -537,13 +583,14 @@ EAP_MSCHAPV2_validate(const struct stage *s, const gchar *name,
 {
   int eap_type = stage_get_int(s, "PEAP_tunneled_eap_type");
 
-  return eap_type == 99 || eap_type == 26 || eap_type == 98;
+  return
+      eap_type == EAP_TTLS_MS || eap_type == EAP_MS || eap_type == EAP_TTLS_PAP;
 }
 
 static gboolean
 EAP_GTC_validate(const struct stage *s,const gchar *name, const gchar *key)
 {
-  return stage_get_int(s, "PEAP_tunneled_eap_type") == 6;
+  return stage_get_int(s, "PEAP_tunneled_eap_type") == EAP_GTC;
 }
 
 static struct stage_widget iap_easy_wlan_wpa_eap_leap_widgets[] =
@@ -585,7 +632,7 @@ iap_run_easy_wlan_get_security(struct easy_wlan *ewlan,
   gint resp_id = GTK_RESPONSE_OK;
   const gchar *wlan_security;
 
-  if (wlancond_capability & 0x1E00)
+  if (wlancond_capability & WLANCOND_WPS_MASK)
   {
     GSList *l = NULL;
     GConfValue *val = gconf_value_new(GCONF_VALUE_LIST);
@@ -605,9 +652,9 @@ iap_run_easy_wlan_get_security(struct easy_wlan *ewlan,
     stage_set_val(&ewlan->stage, "EAP_default_type", val);
     wlan_security = "WPA_EAP";
   }
-  else if (ewlan->security == 0x10000)
+  else if (ewlan->security == IAP_SECURITY_NONE)
     wlan_security = "NONE";
-  else if (ewlan->security == 0xFFF00000)
+  else if (ewlan->security == IAP_SECURITY_WPA_EAP_UNKNOWN)
   {
     resp_id =
         iap_easy_wlan_dialog_run(ewlan,
@@ -618,7 +665,7 @@ iap_run_easy_wlan_get_security(struct easy_wlan *ewlan,
                                  iap_easy_wlan_wpa_eap_type_widgets);
     wlan_security = "WPA_EAP";
   }
-  else if (ewlan->security == 0x20000)
+  else if (ewlan->security == IAP_SECURITY_WEP)
   {
     resp_id =
         iap_easy_wlan_dialog_run(ewlan,
@@ -628,7 +675,7 @@ iap_run_easy_wlan_get_security(struct easy_wlan *ewlan,
                                  iap_easy_wlan_wepkey_widgets);
     wlan_security = "WEP";
   }
-  else if (ewlan->security == 0x80000)
+  else if (ewlan->security == IAP_SECURITY_WPA_PSK)
   {
     resp_id =
         iap_easy_wlan_dialog_run(ewlan,
@@ -656,10 +703,11 @@ iap_run_easy_wlan_get_auth(struct easy_wlan *ewlan)
 {
   gint resp_id = GTK_RESPONSE_OK;
 
-  if (ewlan->security == 0x20000000 || ewlan->security == 0x10000000)
+  if (ewlan->security == IAP_SECURITY_WPA_EAP_TTLS ||
+      ewlan->security == IAP_SECURITY_WPA_EAP_PEAP)
   {
     const char *msgeap =
-        ewlan->security == 0x20000000 ?
+        ewlan->security == IAP_SECURITY_WPA_EAP_TTLS ?
           "conn_set_iap_ti_wlan_wpa_eap_ttls_auth" :
           "conn_set_iap_ti_wlan_wpa_eap_peap_auth";
 
@@ -668,17 +716,19 @@ iap_run_easy_wlan_get_auth(struct easy_wlan *ewlan)
           iap_easy_wlan_wpa_eap_ttls_auth_done_cb,
           iap_easy_wlan_wpa_eap_ttls_auth_widgets);
   }
-  else if (ewlan->security == 0x400000)
+  else if (ewlan->security == IAP_SECURITY_WPA_EAP_TLS)
   {
     resp_id = iap_easy_wlan_dialog_run(
           ewlan, _("conn_set_iap_ti_wlan_wpa_eap_tls_auth"), NULL,
           iap_easy_wlan_wpa_eap_tls_auth_add_widgets_cb, NULL,
           iap_easy_wlan_wpa_eap_tls_auth_widgets);
   }
-  else if (ewlan->security & 0xB800000)
+  else if (ewlan->security &
+           (IAP_SECURITY_WPA_EAP_TTLS_PAP | IAP_SECURITY_WPA_EAP_TTLS_MS |
+            IAP_SECURITY_WPA_EAP_MS | IAP_SECURITY_WPA_EAP_GTC))
   {
     resp_id = iap_easy_wlan_dialog_run(
-          ewlan, ewlan->security & 0x800000 ?
+          ewlan, ewlan->security & IAP_SECURITY_WPA_EAP_GTC ?
             _("conn_set_iap_ti_wlan_wpa_eap_leap") :
             _("conn_set_iap_ti_wlan_wpa_eap_leap2"),
           NULL,
@@ -724,12 +774,12 @@ iap_run_easy_wlan_dialogs(osso_context_t *libosso, GtkWindow *parent,
   }
 
   ewlan.parent = parent;
-  ewlan.security = iap_security >> 16 << 16;
+  ewlan.security = iap_security & IAP_SECURITY_MASK;
   ewlan.widgets = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
   wlan_common_mangle_ssid(ewlan.network_id, strlen(ewlan.network_id));
   stage_create_cache(&ewlan.stage, NULL);
 
-  if (iap_security & 0x40)
+  if (iap_security & IAP_TYPE_ADHOC)
     stage_set_string(&ewlan.stage, "type", "WLAN_ADHOC");
   else
     stage_set_string(&ewlan.stage, "type", "WLAN_INFRA");
@@ -780,6 +830,7 @@ iap_hidden_ssid_dialog_entry_activate_cb(GtkEntry *entry, gpointer user_data)
     gtk_dialog_response(GTK_DIALOG(user_data), GTK_RESPONSE_OK);
 }
 
+#if 0
 static guint
 get_wlan_tx_power()
 {
@@ -807,111 +858,446 @@ get_wlan_tx_power()
 
   return 8;
 }
+#endif
 
 static gboolean
-iter_get_bytearray_val(DBusMessageIter *iter, int *value_len, void *value)
+scan_timeout_cb(gpointer user_data)
 {
-  DBusMessageIter sub;
+  ((struct ssid_info *)user_data)->supplicant_timeout_id = 0;
 
-  if (dbus_message_iter_get_arg_type(iter) != DBUS_TYPE_ARRAY ||
-      dbus_message_iter_get_element_type(iter) != DBUS_TYPE_BYTE)
-  {
-    return FALSE;
-  }
-
-  dbus_message_iter_recurse(iter, &sub);
-  dbus_message_iter_get_fixed_array(&sub, value, value_len);
-  dbus_message_iter_next(iter);
-
-  return TRUE;
-}
-
-static gboolean
-iter_get_val(DBusMessageIter *iter, int arg_type, void *value)
-{
-  if (dbus_message_iter_get_arg_type(iter) != arg_type)
-    return FALSE;
-
-  dbus_message_iter_get_basic(iter, value);
-  dbus_message_iter_next(iter);
-
-  return TRUE;
-}
-
-static DBusHandlerResult
-wlancond_signal(DBusConnection *connection, DBusMessage *message,
-                void *user_data)
-{
-  struct wlancond_info *info = (struct wlancond_info *)user_data;
-  DBusMessageIter iter;
-  dbus_int32_t number_of_results;
-
-  g_return_val_if_fail(info != NULL, DBUS_HANDLER_RESULT_NOT_YET_HANDLED);
-
-  if (!dbus_message_is_signal(message, WLANCOND_SIG_INTERFACE,
-                              WLANCOND_SCAN_RESULTS_SIG))
-  {
-    return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
-  }
-
-  info->scan_results_received = TRUE;
-  dbus_message_iter_init(message, &iter);
-
-  if (!iter_get_val(&iter, DBUS_TYPE_INT32, &number_of_results))
-    return DBUS_HANDLER_RESULT_HANDLED;
-
-  if (number_of_results > 0)
-  {
-    int i;
-    dbus_uint32_t cap_bits;
-    dbus_uint32_t channel;
-    dbus_int32_t rssi;
-    int ssid_len;
-    int bssid_len;
-    gchar *bssid;
-    gchar *ssid;
-
-    for (i = 0; i < number_of_results; i++)
-    {
-      if (!iter_get_bytearray_val(&iter, &ssid_len, &ssid) ||
-          !iter_get_bytearray_val(&iter, &bssid_len, &bssid) ||
-          !iter_get_val(&iter, DBUS_TYPE_INT32, &rssi) ||
-          !iter_get_val(&iter, DBUS_TYPE_UINT32, &channel) ||
-          !iter_get_val(&iter, DBUS_TYPE_UINT32, &cap_bits))
-      {
-        return DBUS_HANDLER_RESULT_HANDLED;
-      }
-
-      if (ssid && info->ssid && !strcmp(ssid, info->ssid))
-      {
-        info->ssid_found = TRUE;
-        info->cap_bits = cap_bits;
-        break;
-      }
-    }
-  }
-
-  if (info->ssid_found)
-    return DBUS_HANDLER_RESULT_HANDLED;
-
-  DLOG_ERR("Unable to find the given SSID: %s", info->ssid);
-
-  return DBUS_HANDLER_RESULT_HANDLED;
-}
-
-static gboolean
-wlancond_timeout_cb(gpointer user_data)
-{
-  ((struct wlancond_info *)user_data)->wlancond_timeout_id = 0;
+  CONNUI_ERR("Timed out waiting for scan results");
 
   return FALSE;
 }
 
 static gboolean
+scan_req_append_type(DBusMessageIter *dict, const char *value)
+{
+  DBusMessageIter entry, variant;
+  const char *key = "Type";
+
+  if (!dbus_message_iter_open_container(dict, DBUS_TYPE_DICT_ENTRY,
+                                        NULL,
+                                        &entry))
+  {
+    return FALSE;
+  }
+
+  if (!dbus_message_iter_append_basic(&entry, DBUS_TYPE_STRING, &key))
+    return FALSE;
+
+  if (!dbus_message_iter_open_container(&entry, DBUS_TYPE_VARIANT,
+                                        DBUS_TYPE_STRING_AS_STRING,
+                                        &variant))
+  {
+    return FALSE;
+  }
+
+  if (!dbus_message_iter_append_basic(&variant, DBUS_TYPE_STRING, &value))
+    return FALSE;
+
+  return
+      dbus_message_iter_close_container(&entry, &variant) &&
+      dbus_message_iter_close_container(dict, &entry);
+}
+
+static gboolean
+scan_req_append_ssid(DBusMessageIter *dict, const char *ssid)
+{
+  DBusMessageIter entry, variant, array, elem;
+  const char *key = "SSIDs";
+
+  if (!dbus_message_iter_open_container(dict, DBUS_TYPE_DICT_ENTRY,
+                                        NULL,
+                                        &entry))
+  {
+    return FALSE;
+  }
+
+  if (!dbus_message_iter_append_basic(&entry, DBUS_TYPE_STRING, &key))
+    return FALSE;
+
+  if (!dbus_message_iter_open_container(&entry, DBUS_TYPE_VARIANT,
+                                        DBUS_TYPE_ARRAY_AS_STRING
+                                        DBUS_TYPE_ARRAY_AS_STRING
+                                        DBUS_TYPE_BYTE_AS_STRING,
+                                        &variant))
+  {
+    return FALSE;
+  }
+
+  if (!dbus_message_iter_open_container(&variant, DBUS_TYPE_ARRAY,
+                                        DBUS_TYPE_ARRAY_AS_STRING
+                                        DBUS_TYPE_BYTE_AS_STRING,
+                                        &array))
+  {
+    return FALSE;
+  }
+
+  if (!dbus_message_iter_open_container(&array, DBUS_TYPE_ARRAY,
+                                        DBUS_TYPE_BYTE_AS_STRING,
+                                        &elem))
+  {
+    return FALSE;
+  }
+
+  if (!dbus_message_iter_append_fixed_array(&elem, DBUS_TYPE_BYTE,
+                                            &ssid, strlen(ssid)))
+  {
+    return FALSE;
+  }
+
+
+  return
+      dbus_message_iter_close_container(&array, &elem) &&
+      dbus_message_iter_close_container(&variant, &array) &&
+      dbus_message_iter_close_container(&entry, &variant) &&
+      dbus_message_iter_close_container(dict, &entry);
+
+}
+
+static gboolean
+create_scan_req(DBusMessage *mcall, const char *ssid)
+{
+  DBusMessageIter array;
+  DBusMessageIter dict;
+
+  dbus_message_iter_init_append(mcall, &array);
+
+  if (!dbus_message_iter_open_container(&array, DBUS_TYPE_ARRAY,
+                                        DBUS_DICT_ENTRY_BEGIN_CHAR_AS_STRING
+                                        DBUS_TYPE_STRING_AS_STRING
+                                        DBUS_TYPE_VARIANT_AS_STRING
+                                        DBUS_DICT_ENTRY_END_CHAR_AS_STRING,
+                                        &dict))
+  {
+    return FALSE;
+  }
+
+  return
+      scan_req_append_type(&dict, "active") &&
+      scan_req_append_ssid(&dict, ssid) &&
+      dbus_message_iter_close_container(&array, &dict);
+}
+
+static guint
+get_cap_bits(struct bss_info *info)
+{
+  gboolean is_wpa2_psk = info->rsn.wpa_psk ||
+                         info->rsn.wpa_ft_psk ||
+                         info->rsn.wpa_psk_sha256;
+  gboolean is_wpa_psk =  info->wpa.wpa_psk;
+  gboolean is_wpa2_eap = info->rsn.wpa_eap ||
+                         info->rsn.wpa_ft_eap ||
+                         info->rsn.wpa_eap_sha256;
+  guint cap = 0;
+
+  if (info->infrastructure)
+    cap |= WLANCOND_INFRA;
+  else
+    cap |= WLANCOND_ADHOC;
+
+  if (info->wpa.wpa_eap || is_wpa2_eap)
+    cap |= WLANCOND_WPA_EAP;
+  else if (is_wpa_psk || is_wpa2_psk)
+    cap |= WLANCOND_WPA_PSK;
+  else if (info->privacy)
+    cap |= WLANCOND_WEP;
+  else
+    cap |= WLANCOND_OPEN;
+
+  if (is_wpa2_eap || is_wpa2_psk)
+    cap |= WLANCOND_WPA2;
+
+  return cap;
+}
+
+static gboolean
+process_wpa(DBusMessageIter *entry, struct wpa *wpa)
+{
+  DBusMessageIter array;
+  DBusMessageIter dict;
+
+  dbus_message_iter_recurse(entry, &array);
+
+  if (dbus_message_iter_get_arg_type(&array) != DBUS_TYPE_ARRAY ||
+      dbus_message_iter_get_element_type(&array) != DBUS_TYPE_DICT_ENTRY)
+  {
+    return FALSE;
+  }
+
+  dbus_message_iter_recurse(&array, &dict);
+
+  do
+  {
+    if (dbus_message_iter_get_arg_type(&dict) == DBUS_TYPE_DICT_ENTRY)
+    {
+      DBusMessageIter entry;
+
+      dbus_message_iter_recurse(&dict, &entry);
+
+      if (dbus_message_iter_get_arg_type(&entry) == DBUS_TYPE_STRING)
+      {
+        const char *key;
+
+        dbus_message_iter_get_basic(&entry, &key);
+
+        if (!strcmp(key, "KeyMgmt"))
+        {
+          DBusMessageIter val;
+
+          dbus_message_iter_next(&entry);
+          dbus_message_iter_recurse(&entry, &val);
+
+          if (dbus_message_iter_get_arg_type(&val) == DBUS_TYPE_ARRAY &&
+              dbus_message_iter_get_element_type(&val) == DBUS_TYPE_STRING)
+          {
+            DBusMessageIter strings;
+
+            dbus_message_iter_recurse(&val, &strings);
+
+            do
+            {
+              const char *keymgmt;
+
+              dbus_message_iter_get_basic(&strings, &keymgmt);
+
+              if (!strcmp(keymgmt, "wpa-psk"))
+                wpa->wpa_psk = TRUE;
+              else if (!strcmp(keymgmt, "wpa-eap"))
+                wpa->wpa_eap = TRUE;
+            }
+            while (dbus_message_iter_next(&strings));
+          }
+        }
+      }
+    }
+  }
+  while (dbus_message_iter_next(&dict));
+
+  return TRUE;
+}
+
+static gboolean
+process_rsn(DBusMessageIter *entry, struct rsn *rsn)
+{
+  DBusMessageIter array;
+  DBusMessageIter dict;
+
+  dbus_message_iter_recurse(entry, &array);
+
+  if (dbus_message_iter_get_arg_type(&array) != DBUS_TYPE_ARRAY ||
+      dbus_message_iter_get_element_type(&array) != DBUS_TYPE_DICT_ENTRY)
+  {
+    return FALSE;
+  }
+
+  dbus_message_iter_recurse(&array, &dict);
+
+  do
+  {
+    if (dbus_message_iter_get_arg_type(&dict) == DBUS_TYPE_DICT_ENTRY)
+    {
+      DBusMessageIter entry;
+
+      dbus_message_iter_recurse(&dict, &entry);
+
+      if (dbus_message_iter_get_arg_type(&entry) == DBUS_TYPE_STRING)
+      {
+        const char *key;
+
+        dbus_message_iter_get_basic(&entry, &key);
+
+        if (!strcmp(key, "KeyMgmt"))
+        {
+          DBusMessageIter val;
+
+          dbus_message_iter_next(&entry);
+          dbus_message_iter_recurse(&entry, &val);
+
+          if (dbus_message_iter_get_arg_type(&val) == DBUS_TYPE_ARRAY &&
+              dbus_message_iter_get_element_type(&val) == DBUS_TYPE_STRING)
+          {
+            DBusMessageIter strings;
+
+            dbus_message_iter_recurse(&val, &strings);
+
+            do
+            {
+              const char *keymgmt;
+
+              dbus_message_iter_get_basic(&strings, &keymgmt);
+
+              if (!strcmp(keymgmt, "wpa-psk"))
+                rsn->wpa_psk = TRUE;
+              else if (!strcmp(keymgmt, "wpa-eap"))
+                rsn->wpa_eap = TRUE;
+              else if (!strcmp(keymgmt, "wpa-ft-psk"))
+                rsn->wpa_ft_psk = TRUE;
+              else if (!strcmp(keymgmt, "wpa-psk-sha256"))
+                rsn->wpa_psk_sha256 = TRUE;
+              else if (!strcmp(keymgmt, "wpa-eap-sha256"))
+                rsn->wpa_eap_sha256 = TRUE;
+            }
+            while (dbus_message_iter_next(&strings));
+          }
+        }
+      }
+    }
+  }
+  while (dbus_message_iter_next(&dict));
+
+  return TRUE;
+}
+
+static gboolean
+bss_added_get_ssid_caps(DBusMessageIter *array, struct ssid_info *info)
+{
+  DBusMessageIter dict;
+  struct bss_info bss_info = {};
+
+  dbus_message_iter_recurse(array, &dict);
+
+  do
+  {
+    if (dbus_message_iter_get_arg_type(&dict) == DBUS_TYPE_DICT_ENTRY)
+    {
+      DBusMessageIter entry;
+
+      dbus_message_iter_recurse(&dict, &entry);
+
+      if (dbus_message_iter_get_arg_type(&entry) == DBUS_TYPE_STRING)
+      {
+        const char *key;
+
+        dbus_message_iter_get_basic(&entry, &key);
+
+        if (!strcmp(key, "SSID"))
+        {
+          DBusMessageIter value;
+
+          dbus_message_iter_next(&entry);
+          dbus_message_iter_recurse(&entry, &value);
+
+          if (dbus_message_iter_get_arg_type(&value) == DBUS_TYPE_ARRAY &&
+              dbus_message_iter_get_element_type(&value) == DBUS_TYPE_BYTE)
+          {
+            DBusMessageIter bytes;
+            int len = 0;
+            gchar *ssid = NULL;
+
+            dbus_message_iter_recurse(&value, &bytes);
+            dbus_message_iter_get_fixed_array(&bytes, &ssid, &len);
+
+            ssid = g_strndup(ssid, len);
+
+            if (ssid && !strcmp(ssid, info->ssid))
+            {
+              info->ssid_found = TRUE;
+              info->scan_results_received = TRUE;
+            }
+
+            g_free(ssid);
+          }
+        }
+        else if (!strcmp(key, "Privacy"))
+        {
+          DBusMessageIter value;
+
+          dbus_message_iter_next(&entry);
+          dbus_message_iter_recurse(&entry, &value);
+
+          if (dbus_message_iter_get_arg_type(&value) == DBUS_TYPE_BOOLEAN)
+          {
+            dbus_bool_t privacy;
+
+            dbus_message_iter_get_basic(&value, &privacy);
+            bss_info.privacy = privacy;
+          }
+        }
+        else if (!strcmp(key, "Mode"))
+        {
+          DBusMessageIter value;
+
+          dbus_message_iter_next(&entry);
+          dbus_message_iter_recurse(&entry, &value);
+
+          if (dbus_message_iter_get_arg_type(&value) == DBUS_TYPE_STRING)
+          {
+            const char *mode;
+
+            dbus_message_iter_get_basic(&value, &mode);
+            bss_info.infrastructure = !strcmp(mode, "infrastructure");
+          }
+        }
+        else if (!strcmp(key, "WPA"))
+        {
+          dbus_message_iter_next(&entry);
+          process_wpa(&entry, &bss_info.wpa);
+        }
+        else if (!strcmp(key, "RSN"))
+        {
+          dbus_message_iter_next(&entry);
+          process_rsn(&entry, &bss_info.rsn);
+        }
+      }
+    }
+  }
+  while (dbus_message_iter_next(&dict));
+
+  if (info->ssid_found)
+    info->cap_bits = get_cap_bits(&bss_info);
+
+  return info->ssid_found;
+}
+
+static DBusHandlerResult
+scan_cb(DBusConnection *connection, DBusMessage *message, gpointer user_data)
+{
+  struct ssid_info *info = user_data;
+  const char *member;
+
+  /* FIXME - hardcoded interface path */
+  if (dbus_message_get_type(message) != DBUS_MESSAGE_TYPE_SIGNAL ||
+      strcmp(dbus_message_get_path(message), WPA_SUPP_INTERFACES_PATH_0))
+  {
+    return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+  }
+
+  member = dbus_message_get_member(message);
+
+  if (!strcmp(member, WPA_SUPP_INTERFACE_BSS_ADDED_SIG))
+  {
+    DBusMessageIter iter;
+
+    dbus_message_iter_init(message, &iter);
+
+    do
+    {
+      if (dbus_message_iter_get_arg_type(&iter) == DBUS_TYPE_ARRAY)
+      {
+        if (bss_added_get_ssid_caps(&iter, info))
+          DLOG_INFO("SSID %s caps 0x%x", info->ssid, info->cap_bits);
+      }
+    }
+    while (!info->ssid_found && dbus_message_iter_next(&iter));
+  }
+  else if (!strcmp(member, WPA_SUPP_INTERFACE_SCAN_DONE_SIG))
+  {
+    if (!info->ssid_found)
+      CONNUI_ERR("Unable to find the given SSID %s", info->ssid);
+
+    info->scan_results_received = TRUE;
+  }
+
+  return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+}
+
+static gboolean
 get_capability_for_ssid(const gchar *ssid, guint *capability)
 {
-  struct wlancond_info info;
-  dbus_int32_t tx_power;
+  struct ssid_info info;
+  //dbus_int32_t tx_power;
   gulong timeout = 500000;
   DBusMessage *mcall;
   DBusMessage *reply;
@@ -923,48 +1309,49 @@ get_capability_for_ssid(const gchar *ssid, guint *capability)
   info.scan_results_received = FALSE;
   info.ssid_found = FALSE;
 
-  if (!connui_dbus_connect_system_path(WLANCOND_SIG_PATH,
-                                       wlancond_signal, &info))
+  if (!connui_dbus_connect_system_bcast_signal(WPA_SUPP_INTERFACE_IFACE,
+                                               scan_cb, &info, NULL))
   {
-    CONNUI_ERR("Unable to register system bus signal/method call path");
+    CONNUI_ERR("Unable to connect to wpa_supplicant '"
+               WPA_SUPP_INTERFACE_SCAN_DONE_SIG "' signal");
     return FALSE;
   }
 
-  tx_power = get_wlan_tx_power();
+  //tx_power = get_wlan_tx_power();
 
   while (1)
   {
-    mcall = dbus_message_new_method_call(WLANCOND_SERVICE,
-                                         WLANCOND_REQ_PATH,
-                                         WLANCOND_REQ_INTERFACE,
-                                         WLANCOND_SCAN_REQ);
-    if (!mcall ||
-        !dbus_message_append_args(mcall,
-                                  DBUS_TYPE_INT32, &tx_power,
-                                  DBUS_TYPE_ARRAY, DBUS_TYPE_BYTE,
-                                  &ssid, strlen(ssid) + 1,
-                                  DBUS_TYPE_INVALID))
-    {
-      DLOG_ERR("Unable to send wlancond scan request!");
-    }
-    else
-    {
-      reply = connui_dbus_recv_reply_system_mcall(mcall);
+    mcall = dbus_message_new_method_call(WPA_SUPP_SERVICE,
+                                         WPA_SUPP_INTERFACES_PATH_0,
+                                         WPA_SUPP_INTERFACE_IFACE,
+                                         WPA_SUPP_INTERFACE_SCAN_REQ);
 
-      if (reply)
+    if (mcall)
+    {
+
+      if (create_scan_req(mcall, ssid))
       {
-        if (dbus_message_get_type(reply) == DBUS_MESSAGE_TYPE_ERROR)
+        reply = connui_dbus_recv_reply_system_mcall(mcall);
+
+        if (reply)
         {
-          DLOG_ERR("wlancond replied with error %s",
-                   dbus_message_get_error_name(reply));
-          dbus_message_unref(reply);
+          if (dbus_message_get_type(reply) == DBUS_MESSAGE_TYPE_ERROR)
+          {
+            DLOG_ERR("wpa_supplicant replied with error %s",
+                     dbus_message_get_error_name(reply));
+            dbus_message_unref(reply);
+          }
+          else
+            break;
         }
         else
-          break;
+          DLOG_ERR("Unable to receive reply from wpa_supplicant!");
       }
       else
-        DLOG_ERR("Unable to receive reply from wlancond!");
+        DLOG_ERR("Unable to send wpa_supplicant scan request!");
     }
+    else
+      DLOG_ERR("Unable to create wpa_supplicant scan request!");
 
     g_usleep(timeout);
 
@@ -980,22 +1367,23 @@ get_capability_for_ssid(const gchar *ssid, guint *capability)
   dbus_message_unref(reply);
   dbus_message_unref(mcall);
 
-  info.wlancond_timeout_id = g_timeout_add(10000, wlancond_timeout_cb, &info);
+  info.supplicant_timeout_id = g_timeout_add(30000, scan_timeout_cb, &info);
 
-  while (!info.scan_results_received && info.wlancond_timeout_id)
+  while (!info.scan_results_received && info.supplicant_timeout_id)
     g_main_context_iteration(NULL, TRUE);
 
-  if (info.wlancond_timeout_id)
+  if (info.supplicant_timeout_id)
   {
-    g_source_remove(info.wlancond_timeout_id);
-    info.wlancond_timeout_id = 0;
+    g_source_remove(info.supplicant_timeout_id);
+    info.supplicant_timeout_id = 0;
     *capability = info.cap_bits;
   }
   else
-    DLOG_ERR("Unable to receive scan results from wlancond!");
+    DLOG_ERR("Unable to receive scan results from wpa_supplicant!");
 
 out:
-  connui_dbus_disconnect_system_path(WLANCOND_SIG_PATH);
+  connui_dbus_disconnect_system_bcast_signal(WPA_SUPP_INTERFACE_IFACE,
+                                             scan_cb, &info, NULL);
 
   return info.ssid_found;
 }
@@ -1053,46 +1441,56 @@ guint
 iap_wlan_to_iap_security(const char *security, guint iap_security, int iap_auth)
 {
   if (!security || !strcmp(security, "NONE"))
-    return 0x10000;
+    return IAP_SECURITY_NONE;
 
   if (!strcmp(security, "WEP"))
-    return 0x20000;
+    return IAP_SECURITY_WEP;
 
   if (!strcmp(security, "WPA_PSK"))
-    return 0x80000;
+    return IAP_SECURITY_WPA_PSK;
 
-  if (strcmp(security, "WPA_EAP"))
-    return 0x10000;
-
-  switch (iap_security)
+  if (!strcmp(security, "WPA_EAP"))
   {
-    case 13:
-      return 0x400000;
-    case 17:
-      return 0x4000000;
-    case 18:
-      return 0x200000;
-    case 21:
-      if(iap_auth == 6)
-        return 0x20800000;
-      else if (iap_auth == 26)
-        return 0x21000000;
-      else if (iap_auth == 98)
-        return 0x28000000;
-      else if (iap_auth == 99)
-        return 0x22000000;
-      else
-        return 0x20000000;
-    case 23:
-      return 0x100000;
-    case 25:
-      if (iap_auth == 6)
-        return 0x10800000;
-      else if (iap_auth == 26)
-        return 0x11000000;
-      else
-        return 0x10000000;
-    default:
-      return 0xFFF00000;
+    switch (iap_security)
+    {
+      case EAP_TLS:
+        return IAP_SECURITY_WPA_EAP_TLS;
+      case 17:
+        return 0x4000000;
+      case 18:
+        return 0x200000;
+      case EAP_TTLS:
+      {
+        guint iap_sec = IAP_SECURITY_WPA_EAP_TTLS;
+
+        if (iap_auth == EAP_GTC)
+          iap_sec |= IAP_SECURITY_WPA_EAP_GTC;
+        else if (iap_auth == EAP_MS)
+          iap_sec |= IAP_SECURITY_WPA_EAP_MS;
+        else if (iap_auth == EAP_TTLS_PAP)
+          iap_sec |= IAP_SECURITY_WPA_EAP_TTLS_PAP;
+        else if (iap_auth == EAP_TTLS_MS)
+          iap_sec |= IAP_SECURITY_WPA_EAP_TTLS_MS;
+
+        return iap_sec;
+      }
+      case 23:
+        return 0x100000;
+      case EAP_PEAP:
+      {
+        guint iap_sec = IAP_SECURITY_WPA_EAP_PEAP;
+
+        if (iap_auth == EAP_GTC)
+          iap_sec |= IAP_SECURITY_WPA_EAP_GTC;
+        else if (iap_auth == EAP_MS)
+          iap_sec |= IAP_SECURITY_WPA_EAP_MS;
+
+        return iap_sec;
+      }
+      default:
+        return IAP_SECURITY_WPA_EAP_UNKNOWN;
+    }
   }
+
+  return IAP_SECURITY_NONE;
 }
