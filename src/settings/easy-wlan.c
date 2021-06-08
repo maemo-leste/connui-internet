@@ -1058,14 +1058,17 @@ process_wpa(DBusMessageIter *entry, struct wpa *wpa)
 
             do
             {
-              const char *keymgmt;
+              if (dbus_message_iter_get_arg_type(&strings) == DBUS_TYPE_STRING)
+              {
+                const char *keymgmt;
 
-              dbus_message_iter_get_basic(&strings, &keymgmt);
+                dbus_message_iter_get_basic(&strings, &keymgmt);
 
-              if (!strcmp(keymgmt, "wpa-psk"))
-                wpa->wpa_psk = TRUE;
-              else if (!strcmp(keymgmt, "wpa-eap"))
-                wpa->wpa_eap = TRUE;
+                if (!strcmp(keymgmt, "wpa-psk"))
+                  wpa->wpa_psk = TRUE;
+                else if (!strcmp(keymgmt, "wpa-eap"))
+                  wpa->wpa_eap = TRUE;
+              }
             }
             while (dbus_message_iter_next(&strings));
           }
@@ -1124,20 +1127,23 @@ process_rsn(DBusMessageIter *entry, struct rsn *rsn)
 
             do
             {
-              const char *keymgmt;
+              if (dbus_message_iter_get_arg_type(&strings) == DBUS_TYPE_STRING)
+              {
+                const char *keymgmt;
 
-              dbus_message_iter_get_basic(&strings, &keymgmt);
+                dbus_message_iter_get_basic(&strings, &keymgmt);
 
-              if (!strcmp(keymgmt, "wpa-psk"))
-                rsn->wpa_psk = TRUE;
-              else if (!strcmp(keymgmt, "wpa-eap"))
-                rsn->wpa_eap = TRUE;
-              else if (!strcmp(keymgmt, "wpa-ft-psk"))
-                rsn->wpa_ft_psk = TRUE;
-              else if (!strcmp(keymgmt, "wpa-psk-sha256"))
-                rsn->wpa_psk_sha256 = TRUE;
-              else if (!strcmp(keymgmt, "wpa-eap-sha256"))
-                rsn->wpa_eap_sha256 = TRUE;
+                if (!strcmp(keymgmt, "wpa-psk"))
+                  rsn->wpa_psk = TRUE;
+                else if (!strcmp(keymgmt, "wpa-eap"))
+                  rsn->wpa_eap = TRUE;
+                else if (!strcmp(keymgmt, "wpa-ft-psk"))
+                  rsn->wpa_ft_psk = TRUE;
+                else if (!strcmp(keymgmt, "wpa-psk-sha256"))
+                  rsn->wpa_psk_sha256 = TRUE;
+                else if (!strcmp(keymgmt, "wpa-eap-sha256"))
+                  rsn->wpa_eap_sha256 = TRUE;
+              }
             }
             while (dbus_message_iter_next(&strings));
           }
@@ -1190,6 +1196,8 @@ bss_added_get_ssid_caps(DBusMessageIter *array, struct ssid_info *info)
             dbus_message_iter_get_fixed_array(&bytes, &ssid, &len);
 
             ssid = g_strndup(ssid, len);
+
+            DLOG_INFO("Found SSID %s", ssid);
 
             if (ssid && !strcmp(ssid, info->ssid))
             {
