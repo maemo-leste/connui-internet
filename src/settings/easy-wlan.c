@@ -28,6 +28,7 @@
 #define WPA_SUPP_INTERFACE_SCAN_DONE_SIG "ScanDone"
 #define WPA_SUPP_INTERFACE_BSS_ADDED_SIG "BSSAdded"
 #define WPA_SUPP_INTERFACE_SCAN_REQ "Scan"
+#define WPA_SUPP_INTERFACE_FLUSH_BSS_REQ "FlushBSS"
 
 #define _(msgid) dgettext("osso-connectivity-ui", msgid)
 #define IS_EMPTY(str) (!(str) || !*(str))
@@ -1309,6 +1310,7 @@ get_capability_for_ssid(const gchar *ssid, guint *capability)
   gulong timeout = 500000;
   DBusMessage *mcall;
   DBusMessage *reply;
+  dbus_uint32_t expiry = 0;
 
   g_return_val_if_fail(capability != NULL, FALSE);
 
@@ -1323,6 +1325,44 @@ get_capability_for_ssid(const gchar *ssid, guint *capability)
     CONNUI_ERR("Unable to connect to wpa_supplicant '"
                WPA_SUPP_INTERFACE_SCAN_DONE_SIG "' signal");
     return FALSE;
+  }
+
+  /*
+     Remove all of the aready cached APs, as BSSAdded is fired only once
+     otherwise.
+  */
+  mcall = connui_dbus_create_method_call(WPA_SUPP_SERVICE,
+                                         WPA_SUPP_INTERFACES_PATH_0,
+                                         WPA_SUPP_INTERFACE_IFACE,
+                                         WPA_SUPP_INTERFACE_FLUSH_BSS_REQ,
+                                         DBUS_TYPE_UINT32, &expiry,
+                                         DBUS_TYPE_INVALID);
+  if (mcall)
+  {
+
+      reply = connui_dbus_recv_reply_system_mcall(mcall);
+
+      if (reply)
+      {
+        if (dbus_message_get_type(reply) == DBUS_MESSAGE_TYPE_ERROR)
+        {
+          DLOG_ERR("wpa_supplicant replied with error %s",
+                   dbus_message_get_error_name(reply));
+          dbus_message_unref(reply);
+        }
+
+        dbus_message_unref(reply);
+      }
+      else
+        DLOG_ERR("Unable to receive reply from wpa_supplicant!");
+
+      dbus_message_unref(mcall);
+  }
+  else
+  {
+    DLOG_ERR("Unable to create wpa_supplicant '"
+             WPA_SUPP_INTERFACE_FLUSH_BSS_REQ
+             "' request!");
   }
 
   //tx_power = get_wlan_tx_power();
