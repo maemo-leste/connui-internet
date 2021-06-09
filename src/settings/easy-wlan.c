@@ -753,7 +753,6 @@ iap_run_easy_wlan_dialogs(osso_context_t *libosso, GtkWindow *parent,
 
   g_return_val_if_fail(wlancond_capability != NULL, NULL);
 
-  iap_security = iap_security_from_wlan_security(*wlancond_capability);
   memset(&ewlan, 0, sizeof(ewlan));
 
   if (IS_EMPTY(network_id))
@@ -763,7 +762,6 @@ iap_run_easy_wlan_dialogs(osso_context_t *libosso, GtkWindow *parent,
     {
       is_hidden = TRUE;
       ewlan.network_id = g_strdup(hidden_ssid);
-      iap_security = iap_security_from_wlan_security(*wlancond_capability);
     }
     else
       return NULL;
@@ -773,6 +771,8 @@ iap_run_easy_wlan_dialogs(osso_context_t *libosso, GtkWindow *parent,
     is_hidden = FALSE;
     ewlan.network_id = g_strdup(network_id);
   }
+
+  iap_security = iap_security_from_wlan_security(*wlancond_capability);
 
   ewlan.parent = parent;
   ewlan.security = iap_security & IAP_SECURITY_MASK;
