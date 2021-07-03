@@ -53,6 +53,35 @@ iap_advanced_hildon_number_editor_new()
   return hildon_number_editor_new(0, 65535);
 }
 
+static GtkWidget *
+iap_provider_type_create()
+{
+  GtkWidget *widget = gtk_combo_box_new_text();
+  GtkComboBox *combo_box = GTK_COMBO_BOX(widget);
+
+  // strings here can be localised
+  gtk_combo_box_append_text(combo_box, "None");
+  gtk_combo_box_append_text(combo_box, "DUMMY");
+
+
+  return widget;
+}
+
+static GtkWidget *
+iap_provider_id_create()
+{
+  GtkWidget *widget = gtk_combo_box_new_text();
+  GtkComboBox *combo_box = GTK_COMBO_BOX(widget);
+
+  // strings here can be localised
+  gtk_combo_box_append_text(combo_box, "None");
+  gtk_combo_box_append_text(combo_box, "dummy-provider");
+
+
+  return widget;
+}
+
+
 static struct iap_advanced_widget iap_advanced_wizard_proxies_widgets[] =
 {
   {
@@ -229,6 +258,29 @@ static struct iap_advanced_widget iap_advanced_wizard_ip_widgets[] =
     "IPV4_AUTO_DNS",
     "conn_set_iap_fi_adv_ip_dns_sec",
     iap_advanced_gtk_entry_num_special_new,
+    FALSE
+  },
+  { NULL, NULL, NULL, NULL, NULL, NULL, 0 }
+};
+
+static struct iap_advanced_widget iap_advanced_wizard_provider_widgets[] =
+{
+  {
+    NULL,
+    "PROVIDER_SERVICE_TYPE",
+    NULL,
+    NULL,
+    "conn_set_iap_fi_adv_provider_type",
+    iap_provider_type_create,
+    FALSE
+  },
+  {
+    NULL,
+    "PROVIDER_SERVICE_ID",
+    NULL,
+    NULL,
+    "conn_set_iap_fi_adv_provider_id",
+    iap_provider_id_create,
     FALSE
   },
   { NULL, NULL, NULL, NULL, NULL, NULL, 0 }
@@ -641,6 +693,14 @@ static struct iap_advanced_page iap_advanced_pages[] =
     iap_advanced_wizard_ip_widgets,
     NULL,
     "Connectivity_Internetsettings_IAPsetupAdvancedIPaddresses",
+    NULL
+  },
+  {
+    TRUE,
+    "conn_set_iap_ti_adv_providers",
+    iap_advanced_wizard_provider_widgets,
+    NULL,
+    "Connectivity_Internetsettings_IAPsetupAdvancedProviders",
     NULL
   },
   {FALSE, NULL, NULL, NULL, NULL, NULL}
