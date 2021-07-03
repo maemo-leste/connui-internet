@@ -1,11 +1,14 @@
 #include <hildon/hildon.h>
 #include <connui/connui.h>
+#include <osso-log.h>
 
 #include <string.h>
 #include <libintl.h>
 
 #include "advanced.h"
 #include "wizard.h"
+
+#define SRV_PROVIDER_GCONF_PATH "/system/osso/connectivity/srv_provider"
 
 void
 iap_advanced_show(struct iap_wizard_advanced *adv)
@@ -51,6 +54,165 @@ static GtkWidget *
 iap_advanced_hildon_number_editor_new()
 {
   return hildon_number_editor_new(0, 65535);
+}
+
+static GtkWidget *
+iap_provider_type_create()
+{
+  GtkWidget *widget = gtk_combo_box_new_text();
+
+  // Entries are added on the fly earlier on in iap_advanced_create
+
+  return widget;
+}
+
+static GtkWidget *
+iap_provider_id_create()
+{
+  GtkWidget *widget = gtk_combo_box_new_text();
+
+  // Entries are added on the fly earlier on in iap_advanced_create
+
+  return widget;
+}
+
+static GSList*
+get_gconf_service_types(void)
+{
+    GError *error = NULL;
+    GSList *providers = NULL, *l = NULL;
+    const char *key = SRV_PROVIDER_GCONF_PATH;
+    GConfClient* client = gconf_client_get_default();
+
+    if (client) {
+        providers = gconf_client_all_dirs(client, key, &error);
+
+        for (l = providers; l; l = l->next) {
+            char* s = l->data;
+            l->data = g_strdup(&s[strlen(key) + sizeof(char)]);
+            g_free(s);
+        }
+
+        if (error != NULL) {
+            ULOG_WARN("Unable to list srv_providers: %s\n", error->message);
+            g_clear_error(&error);
+        }
+
+        g_object_unref(client);
+    }
+    return providers;
+}
+
+static GSList*
+get_gconf_service_ids(const char* service_type)
+{
+    GError *error = NULL;
+    GSList *providers = NULL;
+    GConfClient* client = gconf_client_get_default();
+    char* key = g_strdup_printf("/system/osso/connectivity/srv_provider/%s/available_ids", service_type);
+
+    if (!key)
+        goto out;
+
+    providers = gconf_client_get_list(client, key, GCONF_VALUE_STRING, &error);
+    if (error != NULL) {
+        ULOG_WARN("Unable to list available_ids for %s: %s\n", service_type, error->message);
+        g_clear_error(&error);
+
+        goto out;
+    }
+
+out:
+    if (key != NULL)
+        g_free(key);
+    g_object_unref(client);
+
+    return providers;
+}
+
+static void
+iap_advanced_provider_load_providers(GtkWidget *widget_types, GtkWidget *widget_ids)
+{
+    GSList* service_types = get_gconf_service_types();
+    GSList *l;
+
+    if (!service_types) {
+        ULOG_WARN("iap_advanced_provider_load_providers: Unable to find any service_types in gconf");
+    }
+
+    gtk_combo_box_append_text(GTK_COMBO_BOX(widget_types), dgettext("osso-connectivity-ui", "conn_mngr_dia_fi_none"));
+
+    for (l = service_types; l; l = l->next) {
+        gtk_combo_box_append_text(GTK_COMBO_BOX(widget_types), (const gchar*)l->data);
+
+        /* We don't need to load service ids here, since we will change them once
+         * the service_type gets set by the mapper, in
+         * iap_advanced_provider_changed_cb, after which the mapper will set it to a
+         * valid value, if any */
+    }
+
+    g_slist_free_full(service_types, g_free);
+    return;
+}
+
+static gboolean
+iap_advanced_provider_changed_cb(GtkWidget *widget, struct iap_wizard_advanced *adv)
+{
+    GtkWidget *service_type_widget = g_hash_table_lookup(adv->widgets, "PROVIDER_SERVICE_TYPE");
+    GtkWidget *service_id_widget = g_hash_table_lookup(adv->widgets, "PROVIDER_SERVICE_ID");
+
+    if (widget == service_type_widget) {
+        GtkTreeIter iter;
+        const char* service_type;
+        GSList *service_ids, *ll;
+        gboolean valid;
+        gint ids = 0, idx = 0;
+        GtkTreeModel *model_id, *model_type;
+        char *past_id, *past_type;
+
+        model_id = gtk_combo_box_get_model(GTK_COMBO_BOX(service_id_widget));
+        gtk_list_store_clear(GTK_LIST_STORE(model_id));
+
+        model_type = gtk_combo_box_get_model(GTK_COMBO_BOX(service_type_widget));
+        valid = gtk_combo_box_get_active_iter(GTK_COMBO_BOX(service_type_widget), &iter);
+        if (!valid) {
+            ULOG_WARN("Could not get iterator for service_type_widget model");
+            return TRUE;
+        }
+        gtk_tree_model_get(GTK_TREE_MODEL(model_type), &iter, 0, &service_type, -1);
+
+        service_ids = get_gconf_service_ids(service_type);
+
+        for (ll = service_ids; ll; ll = ll->next) {
+            gtk_combo_box_append_text(GTK_COMBO_BOX(service_id_widget), ll->data);
+            ids++;
+        }
+
+        past_id = stage_get_string(adv->stage, "service_id");
+        past_type = stage_get_string(adv->stage, "service_type");
+
+        if ((ids > 0) && past_id && past_type) {
+            if (!strcmp(past_type, service_type)) {
+                for (ll = service_ids, idx = 0; ll; ll = ll->next, idx++) {
+                    if (!strcmp(past_id, (char*)ll->data)) {
+                        gtk_combo_box_set_active(GTK_COMBO_BOX(service_id_widget), idx);
+                        break;
+                    }
+                }
+            } else {
+                gtk_combo_box_set_active(GTK_COMBO_BOX(service_id_widget), 0);
+            }
+        }
+
+        if (past_id)
+            free(past_id);
+        if (past_type)
+            free(past_type);
+
+        g_slist_free_full(service_ids, g_free);
+    }
+
+    return TRUE;
 }
 
 static struct iap_advanced_widget iap_advanced_wizard_proxies_widgets[] =
@@ -229,6 +391,29 @@ static struct iap_advanced_widget iap_advanced_wizard_ip_widgets[] =
     "IPV4_AUTO_DNS",
     "conn_set_iap_fi_adv_ip_dns_sec",
     iap_advanced_gtk_entry_num_special_new,
+    FALSE
+  },
+  { NULL, NULL, NULL, NULL, NULL, NULL, 0 }
+};
+
+static struct iap_advanced_widget iap_advanced_wizard_provider_widgets[] =
+{
+  {
+    NULL,
+    "PROVIDER_SERVICE_TYPE",
+    NULL,
+    NULL,
+    "conn_set_iap_fi_adv_provider_type",
+    iap_provider_type_create,
+    FALSE
+  },
+  {
+    NULL,
+    "PROVIDER_SERVICE_ID",
+    NULL,
+    NULL,
+    "conn_set_iap_fi_adv_provider_id",
+    iap_provider_id_create,
     FALSE
   },
   { NULL, NULL, NULL, NULL, NULL, NULL, 0 }
@@ -643,6 +828,14 @@ static struct iap_advanced_page iap_advanced_pages[] =
     "Connectivity_Internetsettings_IAPsetupAdvancedIPaddresses",
     NULL
   },
+  {
+    TRUE,
+    "conn_set_iap_ti_adv_providers",
+    iap_advanced_wizard_provider_widgets,
+    NULL,
+    "Connectivity_Internetsettings_IAPsetupAdvancedProviders",
+    NULL
+  },
   {FALSE, NULL, NULL, NULL, NULL, NULL}
 };
 
@@ -886,6 +1079,11 @@ iap_advanced_create(osso_context_t *osso, GtkWindow *parent,
                        G_CALLBACK(iap_advanced_address_key_press), entry);
     }
   }
+
+  GtkWidget *wid_types = GTK_WIDGET(g_hash_table_lookup(adv->widgets, "PROVIDER_SERVICE_TYPE"));
+  GtkWidget *wid_ids = GTK_WIDGET(g_hash_table_lookup(adv->widgets, "PROVIDER_SERVICE_ID"));
+  g_signal_connect(G_OBJECT(wid_types), "changed", G_CALLBACK(iap_advanced_provider_changed_cb), adv);
+  iap_advanced_provider_load_providers(wid_types, wid_ids);
 
   return adv;
 }
