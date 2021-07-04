@@ -667,6 +667,11 @@ static struct iap_wizard_page iap_wizard_pages[] =
   {0}
 };
 
+/* TODO: maybe generate these automatically, at least the IDs, based on existing
+ * configs, we want only specific ids for the dummy_provider */
+static char* provider_types[] = {"", "DUMMY",  NULL};
+static char* provider_ids[] = {"", "dummy-provider",  NULL};
+
 static struct stage_widget iap_wizard_widgets[] =
 {
   {NULL, NULL, "NAME", "name", NULL, &mapper_entry2string, NULL},
@@ -686,6 +691,8 @@ static struct stage_widget iap_wizard_widgets[] =
   {NULL, NULL, "IPV4_AUTO_DNS", "ipv4_autodns", NULL, &mapper_toggle2bool, NULL},
   {NULL, NULL, "IPV4_DNS1", "ipv4_dns1", NULL, &mapper_entry2string, NULL},
   {NULL, NULL, "IPV4_DNS2", "ipv4_dns2", NULL, &mapper_entry2string, NULL},
+  {NULL, NULL, "PROVIDER_SERVICE_TYPE", "service_type", NULL, &mapper_combo2string, provider_types},
+  {NULL, NULL, "PROVIDER_SERVICE_ID", "service_id", NULL, &mapper_combo2string, provider_ids},
   {0, }
 };
 
