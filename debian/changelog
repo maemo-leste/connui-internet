@@ -1,3 +1,9 @@
+connui-internet (2.79.4) unstable; urgency=low
+
+  * advanced: Add providers tab
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Tue, 24 Aug 2021 08:00:32 +0200
+
 connui-internet (2.79.3) unstable; urgency=low
 
   * easy-wlan: When scanning for a hidden AP, flush supplicant cache first
