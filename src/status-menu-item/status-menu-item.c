@@ -122,18 +122,20 @@ connui_internet_status_menu_item_get_icon(network_entry *entry, gboolean dimmed)
       entry->service_type && *entry->service_type &&
       entry->service_id && *entry->service_id)
   {
-    gchar *path = iap_common_get_service_gconf_path(entry->service_type,
-                                                    entry->service_id);
-    if (path)
+
+    if (dimmed)
     {
-      gchar *s = dimmed ?
-            g_strdup_printf("%s/type_statusbar_dimmed_icon_name", path):
-            g_strdup_printf("%s/type_statusbar_icon_name", path);
-
-      rv = gconf_client_get_string(gconf, s, NULL);
-
-      g_free(s);
-      g_free(path);
+      iap_common_get_service_properties(entry->service_type,
+                                        entry->service_id,
+                                        "type_statusbar_dimmed_icon_name", &rv,
+                                        NULL);
+    }
+    else
+    {
+      iap_common_get_service_properties(entry->service_type,
+                                        entry->service_id,
+                                        "type_statusbar_icon_name", &rv,
+                                        NULL);
     }
   }
 
