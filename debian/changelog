@@ -1,3 +1,9 @@
+connui-internet (2.79.5) unstable; urgency=low
+
+  * status: read default provider gconf properties
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Mon, 30 Aug 2021 10:13:53 +0200
+
 connui-internet (2.79.4) unstable; urgency=low
 
   * advanced: Add providers tab
