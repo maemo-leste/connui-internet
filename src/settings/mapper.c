@@ -571,6 +571,8 @@ stringlistfuzzy2combo(const struct stage *s, GtkWidget *entry,
 
         k++;
       }
+
+      j++;
     }
 
     if (match > max)
