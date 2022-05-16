@@ -1,3 +1,9 @@
+connui-internet (2.79.6) unstable; urgency=low
+
+  * settins: Fix endless loop
+
+ -- Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>  Mon, 16 May 2022 05:00:43 +0300
+
 connui-internet (2.79.5) unstable; urgency=low
 
   * status: read default provider gconf properties
