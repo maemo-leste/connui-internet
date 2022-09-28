@@ -1,3 +1,9 @@
+connui-internet (2.79.7) unstable; urgency=low
+
+  * iap_conndlg: Fix activate connection cancel logic
+
+ -- Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>  Wed, 28 Sep 2022 13:08:22 +0300
+
 connui-internet (2.79.6) unstable; urgency=low
 
   * settins: Fix endless loop
