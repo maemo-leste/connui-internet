@@ -16,6 +16,8 @@
 #include "easy-wlan.h"
 #include "easy-gprs.h"
 
+#define IS_EMPTY(str) (!(str) || !*(str))
+
 static void iap_conndlg_close();
 
 IAP_DIALOGS_PLUGIN_DEFINE_EXTENDED(iap_conndlg, ICD_UI_SHOW_CONNDLG_REQ,
@@ -269,79 +271,75 @@ iap_conndlg_activate_iap_connection(GtkTreeModel *model, GtkTreeIter *iter,
   {
     gboolean is_saved = FALSE;
     gboolean can_disconnect = FALSE;
-    connui_scan_entry *scan_entry = NULL;
+    connui_scan_entry *e = NULL;
 
     gtk_tree_model_get(model, iter,
                        IAP_SCAN_LIST_IS_SAVED,
                        &is_saved,
                        IAP_SCAN_LIST_SCAN_ENTRY,
-                       &scan_entry,
+                       &e,
                        IAP_SCAN_LIST_CAN_DISCONNECT,
                        &can_disconnect,
                        -1);
 
     if (!can_disconnect)
     {
-      if (scan_entry && scan_entry->network.network_type)
+      if (e && e->network.network_type)
       {
-        if (!scan_entry->network.service_type ||
-            !*scan_entry->network.service_type)
+        if (IS_EMPTY(e->network.service_type))
         {
-          gchar *chosen_network_id = NULL;
+          gchar *id = NULL;
 
-          if (!is_saved &&
-              !strncmp(scan_entry->network.network_type, "WLAN_", 5))
+          if (!is_saved && !strncmp(e->network.network_type, "WLAN_", 5))
           {
             dbus_uint32_t cap = 0;
 
-            nwattr2cap(scan_entry->network.network_attributes, &cap);
-
-            chosen_network_id = iap_run_easy_wlan_dialogs(
-                  (*iap_conndlg)->libosso, GTK_WINDOW((*iap_conndlg)->dialog),
-                  scan_entry->network.network_id, &cap);
-
-            cap2nwattr(cap, &scan_entry->network.network_attributes);
+            nwattr2cap(e->network.network_attributes, &cap);
+            id = iap_run_easy_wlan_dialogs((*iap_conndlg)->libosso,
+                                           GTK_WINDOW((*iap_conndlg)->dialog),
+                                           e->network.network_id, &cap);
+            g_free(e->network.network_id);
+            e->network.network_id = NULL;
+            cap2nwattr(cap, &e->network.network_attributes);
           }
-          else if (!strncmp(scan_entry->network.network_type, "GPRS", 4))
+          else if (!strncmp(e->network.network_type, "GPRS", 4) &&
+                   IS_EMPTY(e->network_name))
           {
-            if (!scan_entry->network_name || !*scan_entry->network_name)
-            {
-              chosen_network_id =
-                  iap_run_easy_gprs_dialogs((*iap_conndlg)->libosso,
-                                            GTK_WINDOW((*iap_conndlg)->dialog),
-                                            scan_entry->network.network_id);
-            }
+            id = iap_run_easy_gprs_dialogs((*iap_conndlg)->libosso,
+                                           GTK_WINDOW((*iap_conndlg)->dialog),
+                                           e->network.network_id);
+            g_free(e->network.network_id);
+            e->network.network_id = NULL;
           }
 
-          if (chosen_network_id)
+          if (id)
           {
-            g_free(scan_entry->network.network_id);
-            scan_entry->network.network_id = chosen_network_id;
-            scan_entry->network.network_attributes |= ICD_NW_ATTR_IAPNAME;
-            g_slist_free(scan_entry->list);
-            scan_entry->list = g_slist_append(NULL, scan_entry);
+            e->network.network_id = id;
+            e->network.network_attributes |= ICD_NW_ATTR_IAPNAME;
+            g_slist_free(e->list);
+            e->list = g_slist_append(NULL, e);
           }
         }
       }
     }
     else
       iap_network_entry_disconnect(ICD_CONNECTION_FLAG_UI_EVENT,
-                                   &scan_entry->network);
+                                   &e->network);
 
-    if (scan_entry && scan_entry->network.network_type &&
-        scan_entry->network.network_id && !can_disconnect)
+    if (e && e->network.network_type && e->network.network_id &&
+        !can_disconnect)
     {
       network_entry **entries =
-          g_new0(network_entry *, g_slist_length(scan_entry->list) + 1);
+            g_new0(network_entry *, g_slist_length(e->list) + 1);
       int i = 0;
       GSList *l;
 
-      for (l = scan_entry->list; l; l = l->next)
+      for (l = e->list; l; l = l->next)
         entries[i++] = l->data;
 
       iap_network_entry_connect(ICD_CONNECTION_FLAG_UI_EVENT, entries);
       g_free(entries);
-      iap_common_set_last_used_network(&scan_entry->network);
+      iap_common_set_last_used_network(&e->network);
     }
     else
     {
