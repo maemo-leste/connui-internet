@@ -94,6 +94,8 @@ AC_SUBST(hildonpluginlibdir)
 hildoncpdesktopentrydir=`$PKG_CONFIG --variable=plugindesktopentrydir hildon-control-panel`
 AC_SUBST(hildoncpdesktopentrydir)
 
+CFLAGS="$CFLAGS -DOSSOLOG_COMPILE"
+
 AC_ARG_ENABLE(cast-checks,  [  --disable-cast-checks   compile with GLIB cast checks disabled],[cchecks=${enableval}],cchecks=yes)
 if test "x$cchecks" = "xno"; then
     CFLAGS="$CFLAGS -DG_DISABLE_CAST_CHECKS"
