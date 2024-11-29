@@ -1,3 +1,9 @@
+connui-internet (2.79.8) unstable; urgency=low
+
+  * settings/wizard.c: fix compile error
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Fri, 29 Nov 2024 19:21:54 +0100
+
 connui-internet (2.79.7) unstable; urgency=low
 
   * iap_conndlg: Fix activate connection cancel logic
