@@ -1390,9 +1390,6 @@ iap_wizard_restore_state(struct iap_wizard *iw, struct stage_cache *data)
   if (data->processed + sizeof(iw->page) > data->len)
     return FALSE;
 
-  if (!&data->data[data->processed])
-    return FALSE;
-
   memcpy(&iw->page, &data->data[data->processed], sizeof(iw->page));
 
   data->processed += sizeof(iw->page);
